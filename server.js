@@ -2,10 +2,11 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const SibApiV3Sdk = require("sib-api-v3-sdk");
+const { createClient } = require("@supabase/supabase-js");
+const crypto = require("crypto");
+
 const app = express();
 app.use(cors());
-
-// Aumentar limite para suportar ficheiros em base64
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 
@@ -15,8 +16,90 @@ app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 let defaultClient = SibApiV3Sdk.ApiClient.instance;
 let apiKey = defaultClient.authentications["api-key"];
 apiKey.apiKey = process.env.BREVO_API_KEY;
-
 const brevo = new SibApiV3Sdk.TransactionalEmailsApi();
+
+// -----------------------------
+//  SUPABASE CONFIG
+// -----------------------------
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
+
+// -----------------------------
+//  ADMIN — Gerar link
+// -----------------------------
+app.post("/admin/gerar-link", async (req, res) => {
+  const { adminPassword, clienteNome } = req.body;
+
+  if (adminPassword !== process.env.ADMIN_PASSWORD) {
+    return res.status(401).json({ success: false, error: "Password incorreta." });
+  }
+
+  if (!clienteNome) {
+    return res.status(400).json({ success: false, error: "Nome do cliente obrigatório." });
+  }
+
+  const token = crypto.randomBytes(16).toString("hex");
+  const expiraEm = new Date();
+  expiraEm.setDate(expiraEm.getDate() + 15);
+
+  const { error } = await supabase.from("links").insert({
+    token,
+    cliente_nome: clienteNome,
+    expira_em: expiraEm.toISOString()
+  });
+
+  if (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+
+  const link = `https://ricardotdi.github.io/widget-credito/finmais-upload.html?token=${token}`;
+  res.json({ success: true, link, expiraEm });
+});
+
+// -----------------------------
+//  ADMIN — Listar links
+// -----------------------------
+app.get("/admin/listar-links", async (req, res) => {
+  const { adminPassword } = req.query;
+
+  if (adminPassword !== process.env.ADMIN_PASSWORD) {
+    return res.status(401).json({ success: false, error: "Password incorreta." });
+  }
+
+  const { data, error } = await supabase
+    .from("links")
+    .select("*")
+    .order("criado_em", { ascending: false });
+
+  if (error) return res.status(500).json({ success: false, error: error.message });
+  res.json({ success: true, links: data });
+});
+
+// -----------------------------
+//  VALIDAR TOKEN
+// -----------------------------
+app.get("/validar-token", async (req, res) => {
+  const { token } = req.query;
+
+  if (!token) return res.json({ valid: false, motivo: "Token em falta." });
+
+  const { data, error } = await supabase
+    .from("links")
+    .select("*")
+    .eq("token", token)
+    .single();
+
+  if (error || !data) return res.json({ valid: false, motivo: "Link inválido." });
+
+  const agora = new Date();
+  const expira = new Date(data.expira_em);
+
+  if (agora > expira) return res.json({ valid: false, motivo: "Este link expirou." });
+
+  res.json({ valid: true, clienteNome: data.cliente_nome });
+});
 
 // -----------------------------
 //  ROTA LEADS (existente)
@@ -24,7 +107,6 @@ const brevo = new SibApiV3Sdk.TransactionalEmailsApi();
 app.post("/send-email", async (req, res) => {
   try {
     const { nome, email, telefone, valorCredito, prazo, tipoTaxa } = req.body;
-
     const html = `
       <h2>Novo pedido de simulação</h2>
       <p><strong>Nome:</strong> ${nome}</p>
@@ -34,14 +116,12 @@ app.post("/send-email", async (req, res) => {
       <p><strong>Prazo:</strong> ${prazo}</p>
       <p><strong>Tipo de Taxa:</strong> ${tipoTaxa}</p>
     `;
-
     const emailData = {
       sender: { name: "FinMais", email: "geral@finmais.pt" },
       to: [{ email: "geral@finmais.pt" }],
       subject: "Novo pedido de simulação",
       htmlContent: html
     };
-
     const response = await brevo.sendTransacEmail(emailData);
     res.json({ success: true, brevoId: response.messageId });
   } catch (error) {
@@ -51,17 +131,15 @@ app.post("/send-email", async (req, res) => {
 });
 
 // -----------------------------
-//  ROTA DOCUMENTOS (nova)
+//  ROTA DOCUMENTOS (existente)
 // -----------------------------
 app.post("/send-documents", async (req, res) => {
   try {
     const { clienteNome, docList, ficheiros } = req.body;
-
     let htmlDocs = "";
     for (const linha of docList) {
       htmlDocs += `<p>${linha}</p>`;
     }
-
     const html = `
       <h2>📁 Novo envio de documentos</h2>
       <p><strong>Cliente:</strong> ${clienteNome}</p>
@@ -72,20 +150,14 @@ app.post("/send-documents", async (req, res) => {
       <hr/>
       <p style="color:#888; font-size:12px;">Enviado através do portal FinMais</p>
     `;
-
-    const attachment = ficheiros.map(f => ({
-      name: f.name,
-      content: f.data
-    }));
-
+    const attachment = ficheiros.map(f => ({ name: f.name, content: f.data }));
     const emailData = {
       sender: { name: "FinMais Portal", email: "geral@finmais.pt" },
       to: [{ email: "geral@finmais.pt" }],
       subject: `Documentos recebidos — ${clienteNome}`,
       htmlContent: html,
-      attachment: attachment
+      attachment
     };
-
     const response = await brevo.sendTransacEmail(emailData);
     res.json({ success: true, brevoId: response.messageId });
   } catch (error) {
@@ -98,6 +170,4 @@ app.post("/send-documents", async (req, res) => {
 //  SERVIDOR
 // -----------------------------
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Servidor a correr na porta ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Servidor na porta ${PORT}`));
