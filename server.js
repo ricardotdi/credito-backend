@@ -2,7 +2,6 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const SibApiV3Sdk = require("sib-api-v3-sdk");
-
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
@@ -25,7 +24,6 @@ app.post("/send-email", async (req, res) => {
       nome,
       email,
       telefone,
-      rendimento,
       valorCredito,
       prazo,
       tipoTaxa
@@ -36,7 +34,6 @@ app.post("/send-email", async (req, res) => {
       <p><strong>Nome:</strong> ${nome}</p>
       <p><strong>Email:</strong> ${email}</p>
       <p><strong>Telefone:</strong> ${telefone}</p>
-      <p><strong>Rendimento:</strong> ${rendimento}</p>
       <p><strong>Valor do Crédito:</strong> ${valorCredito}</p>
       <p><strong>Prazo:</strong> ${prazo}</p>
       <p><strong>Tipo de Taxa:</strong> ${tipoTaxa}</p>
@@ -50,7 +47,6 @@ app.post("/send-email", async (req, res) => {
     };
 
     const response = await brevo.sendTransacEmail(emailData);
-
     res.json({ success: true, brevoId: response.messageId });
   } catch (error) {
     console.error("Erro ao enviar email:", error);
