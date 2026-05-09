@@ -106,7 +106,7 @@ app.get("/validar-token", async (req, res) => {
 // -----------------------------
 app.post("/send-email", async (req, res) => {
   try {
-    const { nome, email, telefone, horario, valorCredito, prazo, tipoTaxa } = req.body;
+    const { nome, email, telefone, horario, valorCredito, prazo, carencia, tipoTaxa } = req.body;
 
     // ── Email interno para a FinMais ──
     const htmlInterno = `
@@ -117,6 +117,7 @@ app.post("/send-email", async (req, res) => {
       <p><strong>Horário preferencial de contacto:</strong> ${horario || "Qualquer hora"}</p>
       <p><strong>Valor do Crédito:</strong> ${valorCredito}</p>
       <p><strong>Prazo:</strong> ${prazo}</p>
+      ${carencia ? `<p><strong>Carência de capital:</strong> ${carencia}</p>` : ""}
       <p><strong>Tipo de Taxa:</strong> ${tipoTaxa}</p>
     `;
     await brevo.sendTransacEmail({
@@ -139,6 +140,7 @@ app.post("/send-email", async (req, res) => {
         <h3 style="color:#A19276;">Resumo da sua simulação</h3>
         <p><strong>Valor do crédito:</strong> ${valorCredito}</p>
         <p><strong>Prazo:</strong> ${prazo}</p>
+        ${carencia ? `<p><strong>Carência de capital:</strong> ${carencia}</p>` : ""}
         <p><strong>Tipo de Taxa:</strong> ${tipoTaxa}</p>
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
         <p style="font-size:12px; color:#999;">Esta é uma simulação meramente indicativa, sujeita a análise e aprovação bancária. A FinMais não garante as condições apresentadas.</p>
