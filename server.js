@@ -106,12 +106,13 @@ app.get("/validar-token", async (req, res) => {
 // -----------------------------
 app.post("/send-email", async (req, res) => {
   try {
-    const { nome, email, telefone, valorCredito, prazo, tipoTaxa } = req.body;
+    const { nome, email, telefone, horario, valorCredito, prazo, tipoTaxa } = req.body;
     const html = `
       <h2>Novo pedido de simulação</h2>
       <p><strong>Nome:</strong> ${nome}</p>
       <p><strong>Email:</strong> ${email}</p>
       <p><strong>Telefone:</strong> ${telefone}</p>
+      <p><strong>Horário preferencial de contacto:</strong> ${horario || "Qualquer hora"}</p>
       <p><strong>Valor do Crédito:</strong> ${valorCredito}</p>
       <p><strong>Prazo:</strong> ${prazo}</p>
       <p><strong>Tipo de Taxa:</strong> ${tipoTaxa}</p>
