@@ -106,7 +106,7 @@ app.get("/validar-token", async (req, res) => {
 // -----------------------------
 app.post("/send-email", async (req, res) => {
   try {
-    const { nome, email, telefone, horario, valorCredito, prazo, carencia, tipoTaxa } = req.body;
+    const { nome, email, telefone, horario, valorCredito, prazo, carencia, tipoCredito, tipoTaxa } = req.body;
 
     // ── Email interno para a FinMais ──
     const htmlInterno = `
@@ -115,6 +115,7 @@ app.post("/send-email", async (req, res) => {
       <p><strong>Email:</strong> ${email}</p>
       <p><strong>Telefone:</strong> ${telefone}</p>
       <p><strong>Horário preferencial de contacto:</strong> ${horario || "Qualquer hora"}</p>
+      <p><strong>Tipo de Crédito:</strong> ${tipoCredito || "Aquisição"}</p>
       <p><strong>Valor do Crédito:</strong> ${valorCredito}</p>
       <p><strong>Prazo:</strong> ${prazo}</p>
       ${carencia ? `<p><strong>Carência de capital:</strong> ${carencia}</p>` : ""}
@@ -139,6 +140,7 @@ app.post("/send-email", async (req, res) => {
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
         <h3 style="color:#A19276;">Resumo da sua simulação</h3>
         <p><strong>Valor do crédito:</strong> ${valorCredito}</p>
+        <p><strong>Tipo de crédito:</strong> ${tipoCredito || "Aquisição"}</p>
         <p><strong>Prazo:</strong> ${prazo}</p>
         ${carencia ? `<p><strong>Carência de capital:</strong> ${carencia}</p>` : ""}
         <p><strong>Tipo de Taxa:</strong> ${tipoTaxa}</p>
