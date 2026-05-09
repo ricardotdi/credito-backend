@@ -107,7 +107,9 @@ app.get("/validar-token", async (req, res) => {
 app.post("/send-email", async (req, res) => {
   try {
     const { nome, email, telefone, horario, valorCredito, prazo, tipoTaxa } = req.body;
-    const html = `
+
+    // ── Email interno para a FinMais ──
+    const htmlInterno = `
       <h2>Novo pedido de simulação</h2>
       <p><strong>Nome:</strong> ${nome}</p>
       <p><strong>Email:</strong> ${email}</p>
@@ -117,14 +119,40 @@ app.post("/send-email", async (req, res) => {
       <p><strong>Prazo:</strong> ${prazo}</p>
       <p><strong>Tipo de Taxa:</strong> ${tipoTaxa}</p>
     `;
-    const emailData = {
+    await brevo.sendTransacEmail({
       sender: { name: "FinMais", email: "geral@finmais.pt" },
       to: [{ email: "geral@finmais.pt" }],
       subject: "Novo pedido de simulação",
-      htmlContent: html
-    };
-    const response = await brevo.sendTransacEmail(emailData);
-    res.json({ success: true, brevoId: response.messageId });
+      htmlContent: htmlInterno
+    });
+
+    // ── Email de confirmação ao cliente ──
+    const horarioTexto = horario && horario !== "qualquer"
+      ? ", preferencialmente <strong>" + horario + "</strong>"
+      : "";
+    const htmlCliente = `
+      <div style="font-family:Arial,sans-serif; max-width:560px; margin:0 auto; color:#333;">
+        <h2 style="color:#A19276;">Recebemos o seu pedido!</h2>
+        <p>Olá <strong>${nome}</strong>,</p>
+        <p>Obrigado pelo seu contacto. Recebemos a sua simulação e entraremos em contacto consigo em breve${horarioTexto}.</p>
+        <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
+        <h3 style="color:#A19276;">Resumo da sua simulação</h3>
+        <p><strong>Valor do crédito:</strong> ${valorCredito}</p>
+        <p><strong>Prazo:</strong> ${prazo}</p>
+        <p><strong>Tipo de Taxa:</strong> ${tipoTaxa}</p>
+        <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
+        <p style="font-size:12px; color:#999;">Esta é uma simulação meramente indicativa, sujeita a análise e aprovação bancária. A FinMais não garante as condições apresentadas.</p>
+        <p style="font-size:13px;">Com os melhores cumprimentos,<br/><strong>Equipa FinMais</strong></p>
+      </div>
+    `;
+    await brevo.sendTransacEmail({
+      sender: { name: "FinMais", email: "geral@finmais.pt" },
+      to: [{ email: email, name: nome }],
+      subject: "A sua simulação FinMais — confirmação de pedido",
+      htmlContent: htmlCliente
+    });
+
+    res.json({ success: true });
   } catch (error) {
     console.error("Erro ao enviar email:", error);
     res.status(500).json({ success: false, error: error.message });
