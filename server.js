@@ -106,7 +106,7 @@ app.get("/validar-token", async (req, res) => {
 // -----------------------------
 app.post("/send-email", async (req, res) => {
   try {
-    const { nome, email, telefone, horario, valorCredito, prazo, carencia, tipoCredito, tipoTaxa } = req.body;
+    const { nome, email, telefone, horario, valorCredito, prazo, carencia, tipoCredito, tipoTaxa, rendimentoLiquido, dsti } = req.body;
 
     // ── Email interno para a FinMais ──
     const htmlInterno = `
@@ -120,6 +120,8 @@ app.post("/send-email", async (req, res) => {
       <p><strong>Prazo:</strong> ${prazo}</p>
       ${carencia ? `<p><strong>Carência de capital:</strong> ${carencia}</p>` : ""}
       <p><strong>Tipo de Taxa:</strong> ${tipoTaxa}</p>
+      ${rendimentoLiquido ? `<p><strong>Rendimento Líquido Mensal:</strong> ${rendimentoLiquido}</p>` : ""}
+      ${dsti ? `<p><strong>Taxa de Esforço (DSTI):</strong> ${dsti}</p>` : ""}
     `;
     await brevo.sendTransacEmail({
       sender: { name: "FinMais", email: "geral@finmais.pt" },
@@ -144,6 +146,8 @@ app.post("/send-email", async (req, res) => {
         <p><strong>Prazo:</strong> ${prazo}</p>
         ${carencia ? `<p><strong>Carência de capital:</strong> ${carencia}</p>` : ""}
         <p><strong>Tipo de Taxa:</strong> ${tipoTaxa}</p>
+        ${rendimentoLiquido ? `<p><strong>Rendimento Líquido Mensal:</strong> ${rendimentoLiquido}</p>` : ""}
+        ${dsti ? `<p><strong>Taxa de Esforço (DSTI):</strong> ${dsti}</p>` : ""}
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
         <p style="font-size:12px; color:#999;">Esta é uma simulação meramente indicativa, sujeita a análise e aprovação bancária. A FinMais não garante as condições apresentadas.</p>
         <p style="font-size:13px;">Com os melhores cumprimentos,<br/><strong>Equipa FinMais</strong></p>
