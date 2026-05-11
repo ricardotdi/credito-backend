@@ -108,6 +108,15 @@ app.post("/send-email", async (req, res) => {
   try {
     const { nome, email, telefone, horario, valorCredito, prazo, carencia, tipoCredito, tipoTaxa, rendimentoLiquido, dsti } = req.body;
 
+    // ── Formatar valores monetários ──
+    const formatEuro = (val) => {
+      const num = parseFloat(String(val).replace(/[^\d.,]/g, "").replace(",", "."));
+      if (isNaN(num)) return val;
+      return num.toLocaleString("pt-PT", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+    const valorCreditoFmt = valorCredito ? formatEuro(valorCredito) : "";
+    const rendimentoFmt   = rendimentoLiquido ? formatEuro(rendimentoLiquido) : "";
+
     // ── Email interno para a FinMais ──
     const htmlInterno = `
       <h2>Novo pedido de simulação</h2>
@@ -116,11 +125,11 @@ app.post("/send-email", async (req, res) => {
       <p><strong>Telefone:</strong> ${telefone}</p>
       <p><strong>Horário preferencial de contacto:</strong> ${horario || "Qualquer hora"}</p>
       <p><strong>Tipo de Crédito:</strong> ${tipoCredito || "Aquisição"}</p>
-      <p><strong>Valor do Crédito:</strong> ${valorCredito}</p>
+      <p><strong>Valor do Crédito:</strong> ${valorCreditoFmt}</p>
       <p><strong>Prazo:</strong> ${prazo}</p>
       ${carencia ? `<p><strong>Carência de capital:</strong> ${carencia}</p>` : ""}
       <p><strong>Tipo de Taxa:</strong> ${tipoTaxa}</p>
-      ${rendimentoLiquido ? `<p><strong>Rendimento Líquido Mensal:</strong> ${rendimentoLiquido}</p>` : ""}
+      ${rendimentoFmt ? `<p><strong>Rendimento Líquido Mensal:</strong> ${rendimentoFmt}</p>` : ""}
       ${dsti ? `<p><strong>Taxa de Esforço (DSTI):</strong> ${dsti}</p>` : ""}
     `;
     await brevo.sendTransacEmail({
@@ -141,12 +150,12 @@ app.post("/send-email", async (req, res) => {
         <p>Obrigado pelo seu contacto. Recebemos a sua simulação e entraremos em contacto consigo em breve${horarioTexto}.</p>
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
         <h3 style="color:#A19276;">Resumo da sua simulação</h3>
-        <p><strong>Valor do crédito:</strong> ${valorCredito}</p>
+        <p><strong>Valor do crédito:</strong> ${valorCreditoFmt}</p>
         <p><strong>Tipo de crédito:</strong> ${tipoCredito || "Aquisição"}</p>
         <p><strong>Prazo:</strong> ${prazo}</p>
         ${carencia ? `<p><strong>Carência de capital:</strong> ${carencia}</p>` : ""}
         <p><strong>Tipo de Taxa:</strong> ${tipoTaxa}</p>
-        ${rendimentoLiquido ? `<p><strong>Rendimento Líquido Mensal:</strong> ${rendimentoLiquido}</p>` : ""}
+        ${rendimentoFmt ? `<p><strong>Rendimento Líquido Mensal:</strong> ${rendimentoFmt}</p>` : ""}
         ${dsti ? `<p><strong>Taxa de Esforço (DSTI):</strong> ${dsti}</p>` : ""}
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
         <p style="font-size:12px; color:#999;">Esta é uma simulação meramente indicativa, sujeita a análise e aprovação bancária. A FinMais não garante as condições apresentadas.</p>
