@@ -133,13 +133,7 @@ app.post("/send-email", async (req, res) => {
       ${rendimentoFmt ? `<p><strong>Rendimento Líquido Mensal:</strong> ${rendimentoFmt}</p>` : ""}
       ${dsti ? `<p><strong>Taxa de Esforço (DSTI):</strong> ${dsti}</p>` : ""}
     `;
-    // ── Envio separado para cada destinatário interno ──
-    await brevo.sendTransacEmail({
-      sender: { name: "FinMais", email: "geral@finmais.pt" },
-      to: [{ email: "geral@finmais.pt" }],
-      subject: `Novo pedido de contacto — ${nome}`,
-      htmlContent: htmlInterno
-    });
+    // ── Email interno para a FinMais ──
     await brevo.sendTransacEmail({
       sender: { name: "FinMais", email: "geral@finmais.pt" },
       to: [{ email: "geral.finmais@gmail.com" }],
@@ -286,13 +280,7 @@ app.post("/send-email-consolidado", async (req, res) => {
       <p><strong>MTIC (custo total):</strong> ${mtic || "—"}</p>
       <p><strong>Poupança mensal:</strong> ${poupancaMensal || "—"}</p>
     `;
-    // ── Envio separado para cada destinatário interno ──
-    await brevo.sendTransacEmail({
-      sender: { name: "FinMais", email: "geral@finmais.pt" },
-      to: [{ email: "geral@finmais.pt" }],
-      subject: `Novo pedido Crédito Consolidado — ${nome}`,
-      htmlContent: htmlInterno
-    });
+    // ── Email interno para a FinMais ──
     await brevo.sendTransacEmail({
       sender: { name: "FinMais", email: "geral@finmais.pt" },
       to: [{ email: "geral.finmais@gmail.com" }],
