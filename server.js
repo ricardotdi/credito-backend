@@ -135,13 +135,13 @@ app.post("/send-email", async (req, res) => {
     `;
     // ── Envio separado para cada destinatário interno ──
     await brevo.sendTransacEmail({
-      sender: { name: "FinMais Notificações", email: "noreply@finmais.pt" },
+      sender: { name: "FinMais", email: "geral@finmais.pt" },
       to: [{ email: "geral@finmais.pt" }],
       subject: `Novo pedido de contacto — ${nome}`,
       htmlContent: htmlInterno
     });
     await brevo.sendTransacEmail({
-      sender: { name: "FinMais Notificações", email: "noreply@finmais.pt" },
+      sender: { name: "FinMais", email: "geral@finmais.pt" },
       to: [{ email: "geral.finmais@gmail.com" }],
       subject: `Novo pedido de contacto — ${nome}`,
       htmlContent: htmlInterno
@@ -288,13 +288,13 @@ app.post("/send-email-consolidado", async (req, res) => {
     `;
     // ── Envio separado para cada destinatário interno ──
     await brevo.sendTransacEmail({
-      sender: { name: "FinMais Notificações", email: "noreply@finmais.pt" },
+      sender: { name: "FinMais", email: "geral@finmais.pt" },
       to: [{ email: "geral@finmais.pt" }],
       subject: `Novo pedido Crédito Consolidado — ${nome}`,
       htmlContent: htmlInterno
     });
     await brevo.sendTransacEmail({
-      sender: { name: "FinMais Notificações", email: "noreply@finmais.pt" },
+      sender: { name: "FinMais", email: "geral@finmais.pt" },
       to: [{ email: "geral.finmais@gmail.com" }],
       subject: `Novo pedido Crédito Consolidado — ${nome}`,
       htmlContent: htmlInterno
