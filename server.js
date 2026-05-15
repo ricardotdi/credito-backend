@@ -106,7 +106,14 @@ app.get("/validar-token", async (req, res) => {
 // -----------------------------
 app.post("/send-email", async (req, res) => {
   try {
-    const { nome, email, telefone, horario, valorCredito, prazo, carencia, tipoCredito, tipoTaxa, rendimentoLiquido, dsti } = req.body;
+    const {
+      nome, email, telefone, horario,
+      valorCredito, prazo, carencia, tipoCredito, tipoTaxa,
+      rendimentoLiquido, dsti, mensagem
+    } = req.body;
+
+    // ── Determina se vem do widget de contacto simples ou do simulador ──
+    const temSimulacao = !!(valorCredito || prazo || tipoCredito || tipoTaxa);
 
     // ── Formatar valores monetários ──
     const formatEuro = (val) => {
@@ -119,11 +126,15 @@ app.post("/send-email", async (req, res) => {
 
     // ── Email interno para a FinMais ──
     const htmlInterno = `
-      <h2>Novo pedido de simulação</h2>
+      <h2>${temSimulacao ? "Novo pedido de simulação" : "Novo pedido de contacto"}</h2>
       <p><strong>Nome:</strong> ${nome}</p>
       <p><strong>Email:</strong> ${email}</p>
-      <p><strong>Telefone:</strong> ${telefone}</p>
+      <p><strong>Telemóvel:</strong> ${telefone || "—"}</p>
       <p><strong>Horário preferencial de contacto:</strong> ${horario || "Qualquer hora"}</p>
+      ${mensagem ? `<p><strong>Assunto / Mensagem:</strong> ${mensagem}</p>` : ""}
+      ${temSimulacao ? `
+      <hr style="border:none; border-top:1px solid #eee; margin:16px 0;" />
+      <h3>Dados da Simulação</h3>
       <p><strong>Tipo de Crédito:</strong> ${tipoCredito || "Aquisição"}</p>
       <p><strong>Valor do Crédito:</strong> ${valorCreditoFmt}</p>
       <p><strong>Prazo:</strong> ${prazo}</p>
@@ -131,23 +142,27 @@ app.post("/send-email", async (req, res) => {
       <p><strong>Tipo de Taxa:</strong> ${tipoTaxa}</p>
       ${rendimentoFmt ? `<p><strong>Rendimento Líquido Mensal:</strong> ${rendimentoFmt}</p>` : ""}
       ${dsti ? `<p><strong>Taxa de Esforço (DSTI):</strong> ${dsti}</p>` : ""}
+      ` : ""}
     `;
     await brevo.sendTransacEmail({
       sender: { name: "FinMais", email: "geral@finmais.pt" },
       to: [{ email: "geral@finmais.pt" }],
-      subject: "Novo pedido de simulação",
+      subject: temSimulacao ? "Novo pedido de simulação" : `Novo pedido de contacto — ${nome}`,
       htmlContent: htmlInterno
     });
 
     // ── Email de confirmação ao cliente ──
-    const horarioTexto = horario && horario !== "qualquer"
+    const horarioTexto = horario && horario !== "Qualquer hora"
       ? ", preferencialmente <strong>" + horario + "</strong>"
       : "";
+
     const htmlCliente = `
       <div style="font-family:Arial,sans-serif; max-width:560px; margin:0 auto; color:#333;">
         <h2 style="color:#A19276;">Recebemos o seu pedido!</h2>
         <p>Olá <strong>${nome}</strong>,</p>
-        <p>Obrigado pelo seu contacto. Recebemos a sua simulação e entraremos em contacto consigo em breve${horarioTexto}.</p>
+        <p>Obrigado pelo seu contacto. Entraremos em contacto consigo em breve${horarioTexto} através do número <strong>${telefone || "indicado"}</strong>.</p>
+        ${mensagem ? `<p><strong>O seu assunto:</strong> ${mensagem}</p>` : ""}
+        ${temSimulacao ? `
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
         <h3 style="color:#A19276;">Resumo da sua simulação</h3>
         <p><strong>Valor do crédito:</strong> ${valorCreditoFmt}</p>
@@ -157,6 +172,7 @@ app.post("/send-email", async (req, res) => {
         <p><strong>Tipo de Taxa:</strong> ${tipoTaxa}</p>
         ${rendimentoFmt ? `<p><strong>Rendimento Líquido Mensal:</strong> ${rendimentoFmt}</p>` : ""}
         ${dsti ? `<p><strong>Taxa de Esforço (DSTI):</strong> ${dsti}</p>` : ""}
+        ` : ""}
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
         <p style="font-size:12px; color:#999;">Esta é uma simulação meramente indicativa, sujeita a análise e aprovação bancária. A FinMais não garante as condições apresentadas.</p>
         <p style="font-size:13px;">Com os melhores cumprimentos,<br/><strong>Equipa FinMais</strong></p>
@@ -165,7 +181,7 @@ app.post("/send-email", async (req, res) => {
     await brevo.sendTransacEmail({
       sender: { name: "FinMais", email: "geral@finmais.pt" },
       to: [{ email: email, name: nome }],
-      subject: "A sua simulação FinMais — confirmação de pedido",
+      subject: "Recebemos o seu pedido — FinMais",
       htmlContent: htmlCliente
     });
 
@@ -208,121 +224,6 @@ app.post("/send-documents", async (req, res) => {
     res.json({ success: true, brevoId: response.messageId });
   } catch (error) {
     console.error("Erro ao enviar documentos:", error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// -----------------------------
-//  ROTA CRÉDITO CONSOLIDADO
-// -----------------------------
-app.post("/send-email-consolidado", async (req, res) => {
-  try {
-    const {
-      nome, email, telefone, horario,
-      creditosConsolidar,
-      valorImovel, novoPrazo, tipoTaxa, dadosTaxa,
-      montanteExtra, rendimentoLiquido, encargosAtuais,
-      capitalConsolidado, novaPrestacao, prestacaoAtual,
-      tan, taeg, mtic, poupancaMensal,
-      dstiAntes, dstiDepois
-    } = req.body;
-
-    // ── Bloco HTML dos dados de taxa conforme o tipo ──
-    const tipoLabel = { variavel: "Variável", fixa: "Fixa", mista: "Mista" }[tipoTaxa] || tipoTaxa;
-    let htmlTaxa = `<p><strong>Tipo de taxa:</strong> ${tipoLabel}</p>`;
-    if (tipoTaxa === "variavel") {
-      if (dadosTaxa?.euribor) htmlTaxa += `<p><strong>Taxa Euribor:</strong> ${dadosTaxa.euribor}</p>`;
-      if (dadosTaxa?.spread)  htmlTaxa += `<p><strong>Spread:</strong> ${dadosTaxa.spread}</p>`;
-    } else if (tipoTaxa === "fixa") {
-      if (dadosTaxa?.tanFixo) htmlTaxa += `<p><strong>TAN fixo:</strong> ${dadosTaxa.tanFixo}</p>`;
-    } else if (tipoTaxa === "mista") {
-      htmlTaxa += `<p><strong>Fase fixa — Prazo:</strong> ${dadosTaxa?.prazoFixo || "—"} &nbsp;|&nbsp; <strong>TAN:</strong> ${dadosTaxa?.tanFixo || "—"}</p>`;
-      htmlTaxa += `<p><strong>Fase variável — Prazo:</strong> ${dadosTaxa?.prazoVar || "—"} &nbsp;|&nbsp; <strong>Euribor:</strong> ${dadosTaxa?.euribor || "—"} &nbsp;|&nbsp; <strong>Spread:</strong> ${dadosTaxa?.spread || "—"}</p>`;
-    }
-
-    // ── Email interno para a FinMais ──
-    const htmlInterno = `
-      <h2 style="color:#A19276;">🔔 Novo pedido — Crédito Consolidado</h2>
-      <h3>Dados do cliente</h3>
-      <p><strong>Nome:</strong> ${nome}</p>
-      <p><strong>Email:</strong> ${email}</p>
-      <p><strong>Telemóvel:</strong> ${telefone}</p>
-      <p><strong>Horário preferencial:</strong> ${horario || "Qualquer hora"}</p>
-      <hr/>
-      <h3>Créditos a consolidar</h3>
-      ${(creditosConsolidar || "").split(" | ").map(c => `<p>• ${c}</p>`).join("")}
-      <p><strong>Prestação atual total:</strong> ${prestacaoAtual || "—"}</p>
-      <p><strong>Encargos mensais atuais:</strong> ${encargosAtuais || "—"}</p>
-      <hr/>
-      <h3>Imóvel em garantia</h3>
-      <p><strong>Valor do imóvel:</strong> ${valorImovel || "—"}</p>
-      <hr/>
-      <h3>Novo crédito consolidado</h3>
-      <p><strong>Prazo pretendido:</strong> ${novoPrazo || "—"}</p>
-      ${htmlTaxa}
-      ${montanteExtra ? `<p><strong>Montante extra:</strong> ${montanteExtra}</p>` : ""}
-      <hr/>
-      <h3>Rendimento</h3>
-      <p><strong>Rendimento líquido mensal:</strong> ${rendimentoLiquido || "—"}</p>
-      <p><strong>Taxa de esforço antes (DSTI):</strong> ${dstiAntes || "—"}</p>
-      <p><strong>Taxa de esforço depois (DSTI):</strong> ${dstiDepois || "—"}</p>
-      <hr/>
-      <h3>Resultados da simulação</h3>
-      <p><strong>Capital consolidado:</strong> ${capitalConsolidado || "—"}</p>
-      <p><strong>Nova prestação:</strong> ${novaPrestacao || "—"}</p>
-      <p><strong>TAN:</strong> ${tan || "—"}</p>
-      <p><strong>TAEG:</strong> ${taeg || "—"}</p>
-      <p><strong>MTIC (custo total):</strong> ${mtic || "—"}</p>
-      <p><strong>Poupança mensal:</strong> ${poupancaMensal || "—"}</p>
-    `;
-    await brevo.sendTransacEmail({
-      sender: { name: "FinMais", email: "geral@finmais.pt" },
-      to: [{ email: "geral@finmais.pt" }],
-      subject: `Novo pedido Crédito Consolidado — ${nome}`,
-      htmlContent: htmlInterno
-    });
-
-    // ── Email de confirmação ao cliente ──
-    const horarioTexto = horario && horario !== "Qualquer hora"
-      ? `, preferencialmente <strong>${horario}</strong>`
-      : "";
-    const htmlCliente = `
-      <div style="font-family:Arial,sans-serif; max-width:560px; margin:0 auto; color:#333;">
-        <h2 style="color:#A19276;">Recebemos o seu pedido!</h2>
-        <p>Olá <strong>${nome}</strong>,</p>
-        <p>Obrigado pelo seu contacto. Recebemos a sua simulação de consolidação de crédito e entraremos em contacto consigo em breve${horarioTexto}.</p>
-        <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
-        <h3 style="color:#A19276;">Resumo da sua simulação</h3>
-        <p><strong>Créditos a consolidar:</strong></p>
-        ${(creditosConsolidar || "").split(" | ").map(c => `<p style="margin:2px 0;">• ${c}</p>`).join("")}
-        <p><strong>Valor do imóvel em garantia:</strong> ${valorImovel || "—"}</p>
-        <p><strong>Prazo pretendido:</strong> ${novoPrazo || "—"}</p>
-        ${htmlTaxa}
-        ${montanteExtra ? `<p><strong>Montante extra solicitado:</strong> ${montanteExtra}</p>` : ""}
-        <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
-        <h3 style="color:#A19276;">Resultado indicativo</h3>
-        <p><strong>Capital consolidado:</strong> ${capitalConsolidado || "—"}</p>
-        <p><strong>Nova prestação mensal:</strong> ${novaPrestacao || "—"}</p>
-        <p><strong>Prestação atual total:</strong> ${prestacaoAtual || "—"}</p>
-        <p><strong>Poupança mensal estimada:</strong> ${poupancaMensal || "—"}</p>
-        <p><strong>TAN:</strong> ${tan || "—"} &nbsp;|&nbsp; <strong>TAEG:</strong> ${taeg || "—"}</p>
-        <p><strong>MTIC (custo total estimado):</strong> ${mtic || "—"}</p>
-        <p><strong>Taxa de esforço antes:</strong> ${dstiAntes || "—"} &nbsp;→&nbsp; <strong>depois:</strong> ${dstiDepois || "—"}</p>
-        <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
-        <p style="font-size:12px; color:#999;">Valores meramente indicativos, sujeitos a análise e aprovação bancária. A FinMais não garante as condições apresentadas.</p>
-        <p style="font-size:13px;">Com os melhores cumprimentos,<br/><strong>Equipa FinMais</strong></p>
-      </div>
-    `;
-    await brevo.sendTransacEmail({
-      sender: { name: "FinMais", email: "geral@finmais.pt" },
-      to: [{ email: email, name: nome }],
-      subject: "A sua simulação de Crédito Consolidado — FinMais",
-      htmlContent: htmlCliente
-    });
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error("Erro ao enviar email consolidado:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
