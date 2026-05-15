@@ -136,7 +136,7 @@ app.post("/send-email", async (req, res) => {
     // ── Email interno para a FinMais ──
     await brevo.sendTransacEmail({
       sender: { name: "FinMais", email: "geral@finmais.pt" },
-      to: [{ email: "geral.finmais@gmail.com" }],
+      to: [{ email: "noreply@finmais.pt" }],
       subject: `Novo pedido de contacto — ${nome}`,
       htmlContent: htmlInterno
     });
@@ -283,7 +283,7 @@ app.post("/send-email-consolidado", async (req, res) => {
     // ── Email interno para a FinMais ──
     await brevo.sendTransacEmail({
       sender: { name: "FinMais", email: "geral@finmais.pt" },
-      to: [{ email: "geral.finmais@gmail.com" }],
+      to: [{ email: "noreply@finmais.pt" }],
       subject: `Novo pedido Crédito Consolidado — ${nome}`,
       htmlContent: htmlInterno
     });
