@@ -119,17 +119,17 @@ app.post("/send-email", async (req, res) => {
 
     // ── Email interno para a FinMais ──
     const htmlInterno = `
-      <h2>Novo pedido de simulação</h2>
+      <h2>Novo pedido de contacto / simulação</h2>
       <p><strong>Nome:</strong> ${nome}</p>
       <p><strong>Email:</strong> ${email}</p>
       <p><strong>Telefone:</strong> ${telefone}</p>
       <p><strong>Horário preferencial de contacto:</strong> ${horario || "Qualquer hora"}</p>
       ${mensagem ? `<p><strong>Assunto / Mensagem:</strong> ${mensagem}</p>` : ""}
-      <p><strong>Tipo de Crédito:</strong> ${tipoCredito || "Aquisição"}</p>
-      <p><strong>Valor do Crédito:</strong> ${valorCreditoFmt}</p>
-      <p><strong>Prazo:</strong> ${prazo}</p>
+      ${tipoCredito ? `<p><strong>Tipo de Crédito:</strong> ${tipoCredito}</p>` : ""}
+      ${valorCreditoFmt ? `<p><strong>Valor do Crédito:</strong> ${valorCreditoFmt}</p>` : ""}
+      ${prazo ? `<p><strong>Prazo:</strong> ${prazo}</p>` : ""}
       ${carencia ? `<p><strong>Carência de capital:</strong> ${carencia}</p>` : ""}
-      <p><strong>Tipo de Taxa:</strong> ${tipoTaxa}</p>
+      ${tipoTaxa ? `<p><strong>Tipo de Taxa:</strong> ${tipoTaxa}</p>` : ""}
       ${rendimentoFmt ? `<p><strong>Rendimento Líquido Mensal:</strong> ${rendimentoFmt}</p>` : ""}
       ${dsti ? `<p><strong>Taxa de Esforço (DSTI):</strong> ${dsti}</p>` : ""}
     `;
@@ -150,15 +150,17 @@ app.post("/send-email", async (req, res) => {
         <p>Olá <strong>${nome}</strong>,</p>
         <p>Obrigado pelo seu contacto. Recebemos a sua simulação e entraremos em contacto consigo em breve${horarioTexto} através do número <strong>${telefone || "indicado"}</strong>.</p>
         ${mensagem ? `<p><strong>O seu assunto:</strong> ${mensagem}</p>` : ""}
+        ${(valorCreditoFmt || prazo || tipoTaxa) ? `
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
         <h3 style="color:#A19276;">Resumo da sua simulação</h3>
-        <p><strong>Valor do crédito:</strong> ${valorCreditoFmt}</p>
-        <p><strong>Tipo de crédito:</strong> ${tipoCredito || "Aquisição"}</p>
-        <p><strong>Prazo:</strong> ${prazo}</p>
+        ${valorCreditoFmt ? `<p><strong>Valor do crédito:</strong> ${valorCreditoFmt}</p>` : ""}
+        ${tipoCredito ? `<p><strong>Tipo de crédito:</strong> ${tipoCredito}</p>` : ""}
+        ${prazo ? `<p><strong>Prazo:</strong> ${prazo}</p>` : ""}
         ${carencia ? `<p><strong>Carência de capital:</strong> ${carencia}</p>` : ""}
-        <p><strong>Tipo de Taxa:</strong> ${tipoTaxa}</p>
+        ${tipoTaxa ? `<p><strong>Tipo de Taxa:</strong> ${tipoTaxa}</p>` : ""}
         ${rendimentoFmt ? `<p><strong>Rendimento Líquido Mensal:</strong> ${rendimentoFmt}</p>` : ""}
         ${dsti ? `<p><strong>Taxa de Esforço (DSTI):</strong> ${dsti}</p>` : ""}
+        ` : ""}
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
         <p style="font-size:12px; color:#999;">Esta é uma simulação meramente indicativa, sujeita a análise e aprovação bancária. A FinMais não garante as condições apresentadas.</p>
         <p style="font-size:13px;">Com os melhores cumprimentos,<br/><strong>Equipa FinMais</strong></p>
