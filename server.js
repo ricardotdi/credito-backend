@@ -134,7 +134,7 @@ app.post("/send-email", async (req, res) => {
       ${dsti ? `<p><strong>Taxa de Esforço (DSTI):</strong> ${dsti}</p>` : ""}
     `;
     await brevo.sendTransacEmail({
-      sender: { name: "FinMais", email: "geral@finmais.pt" },
+      sender: { name: "FinMais Notificações", email: "noreply@finmais.pt" },
       to: [
         { email: "geral@finmais.pt" },
         { email: "geral.finmais@gmail.com" }
@@ -283,7 +283,7 @@ app.post("/send-email-consolidado", async (req, res) => {
       <p><strong>Poupança mensal:</strong> ${poupancaMensal || "—"}</p>
     `;
     await brevo.sendTransacEmail({
-      sender: { name: "FinMais", email: "geral@finmais.pt" },
+      sender: { name: "FinMais Notificações", email: "noreply@finmais.pt" },
       to: [
         { email: "geral@finmais.pt" },
         { email: "geral.finmais@gmail.com" }
