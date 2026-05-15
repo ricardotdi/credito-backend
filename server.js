@@ -133,12 +133,16 @@ app.post("/send-email", async (req, res) => {
       ${rendimentoFmt ? `<p><strong>Rendimento Líquido Mensal:</strong> ${rendimentoFmt}</p>` : ""}
       ${dsti ? `<p><strong>Taxa de Esforço (DSTI):</strong> ${dsti}</p>` : ""}
     `;
+    // ── Envio separado para cada destinatário interno ──
     await brevo.sendTransacEmail({
       sender: { name: "FinMais Notificações", email: "noreply@finmais.pt" },
-      to: [
-        { email: "geral@finmais.pt" },
-        { email: "geral.finmais@gmail.com" }
-      ],
+      to: [{ email: "geral@finmais.pt" }],
+      subject: `Novo pedido de contacto — ${nome}`,
+      htmlContent: htmlInterno
+    });
+    await brevo.sendTransacEmail({
+      sender: { name: "FinMais Notificações", email: "noreply@finmais.pt" },
+      to: [{ email: "geral.finmais@gmail.com" }],
       subject: `Novo pedido de contacto — ${nome}`,
       htmlContent: htmlInterno
     });
@@ -165,7 +169,7 @@ app.post("/send-email", async (req, res) => {
         ${dsti ? `<p><strong>Taxa de Esforço (DSTI):</strong> ${dsti}</p>` : ""}
         ` : ""}
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
-        <p style="font-size:12px; color:#999;">Esta é uma simulação meramente indicativa, sujeita a análise e aprovação bancária. A FinMais não garante as condições apresentadas.</p>
+        <p style="font-size:12px; color:#999;">Os seus dados são tratados de forma confidencial e não serão partilhados com terceiros. Pode exercer os seus direitos de acesso, retificação ou eliminação contactando-nos através de geral@finmais.pt.</p>
         <p style="font-size:13px;">Com os melhores cumprimentos,<br/><strong>Equipa FinMais</strong></p>
       </div>
     `;
@@ -282,12 +286,16 @@ app.post("/send-email-consolidado", async (req, res) => {
       <p><strong>MTIC (custo total):</strong> ${mtic || "—"}</p>
       <p><strong>Poupança mensal:</strong> ${poupancaMensal || "—"}</p>
     `;
+    // ── Envio separado para cada destinatário interno ──
     await brevo.sendTransacEmail({
       sender: { name: "FinMais Notificações", email: "noreply@finmais.pt" },
-      to: [
-        { email: "geral@finmais.pt" },
-        { email: "geral.finmais@gmail.com" }
-      ],
+      to: [{ email: "geral@finmais.pt" }],
+      subject: `Novo pedido Crédito Consolidado — ${nome}`,
+      htmlContent: htmlInterno
+    });
+    await brevo.sendTransacEmail({
+      sender: { name: "FinMais Notificações", email: "noreply@finmais.pt" },
+      to: [{ email: "geral.finmais@gmail.com" }],
       subject: `Novo pedido Crédito Consolidado — ${nome}`,
       htmlContent: htmlInterno
     });
