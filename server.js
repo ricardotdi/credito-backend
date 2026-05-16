@@ -136,7 +136,7 @@ app.post("/send-email", async (req, res) => {
     // ── Email interno para a FinMais ──
     await brevo.sendTransacEmail({
       sender: { name: "FinMais", email: "geral@finmais.pt" },
-      to: [{ email: "geral.finmais@gmail.com" }],
+      to: [{ email: "geral@finmais.pt" }, { email: "geral.finmais@gmail.com" }],
       subject: `Novo pedido de contacto — ${nome}`,
       htmlContent: htmlInterno
     });
@@ -204,7 +204,7 @@ app.post("/send-documents", async (req, res) => {
     const attachment = ficheiros.map(f => ({ name: f.name, content: f.data }));
     const emailData = {
       sender: { name: "FinMais Portal", email: "geral@finmais.pt" },
-      to: [{ email: "geral@finmais.pt" }],
+      to: [{ email: "geral@finmais.pt" }, { email: "geral.finmais@gmail.com" }],
       subject: `Documentos recebidos — ${clienteNome}`,
       htmlContent: html,
       attachment
@@ -283,7 +283,7 @@ app.post("/send-email-consolidado", async (req, res) => {
     // ── Email interno para a FinMais ──
     await brevo.sendTransacEmail({
       sender: { name: "FinMais", email: "geral@finmais.pt" },
-      to: [{ email: "geral.finmais@gmail.com" }],
+      to: [{ email: "geral@finmais.pt" }, { email: "geral.finmais@gmail.com" }],
       subject: `Novo pedido Crédito Consolidado — ${nome}`,
       htmlContent: htmlInterno
     });
