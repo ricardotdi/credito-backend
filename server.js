@@ -133,13 +133,14 @@ app.post("/send-email", async (req, res) => {
       ${rendimentoFmt ? `<p><strong>Rendimento Líquido Mensal:</strong> ${rendimentoFmt}</p>` : ""}
       ${dsti ? `<p><strong>Taxa de Esforço (DSTI):</strong> ${dsti}</p>` : ""}
     `;
-    // ── Email interno para a FinMais ──
-    await brevo.sendTransacEmail({
-      sender: { name: "FinMais", email: "geral@finmais.pt" },
-      to: [{ email: "geral@finmais.pt" }, { email: "geral.finmais@gmail.com" }],
+    // ── Email interno para a FinMais (dois destinatários em chamadas separadas) ──
+    const emailInternoPayload = {
+      sender: { name: "FinMais Leads", email: "geral.finmais@gmail.com" },
       subject: `Novo pedido de contacto — ${nome}`,
       htmlContent: htmlInterno
-    });
+    };
+    await brevo.sendTransacEmail({ ...emailInternoPayload, to: [{ email: "geral@finmais.pt" }] });
+    await brevo.sendTransacEmail({ ...emailInternoPayload, to: [{ email: "geral.finmais@gmail.com" }] });
 
     // ── Email de confirmação ao cliente ──
     const horarioTexto = horario && horario !== "qualquer"
@@ -203,13 +204,13 @@ app.post("/send-documents", async (req, res) => {
     `;
     const attachment = ficheiros.map(f => ({ name: f.name, content: f.data }));
     const emailData = {
-      sender: { name: "FinMais Portal", email: "geral@finmais.pt" },
-      to: [{ email: "geral@finmais.pt" }, { email: "geral.finmais@gmail.com" }],
+      sender: { name: "FinMais Portal", email: "geral.finmais@gmail.com" },
       subject: `Documentos recebidos — ${clienteNome}`,
       htmlContent: html,
       attachment
     };
-    const response = await brevo.sendTransacEmail(emailData);
+    const response = await brevo.sendTransacEmail({ ...emailData, to: [{ email: "geral@finmais.pt" }] });
+    await brevo.sendTransacEmail({ ...emailData, to: [{ email: "geral.finmais@gmail.com" }] });
     res.json({ success: true, brevoId: response.messageId });
   } catch (error) {
     console.error("Erro ao enviar documentos:", error);
@@ -280,13 +281,14 @@ app.post("/send-email-consolidado", async (req, res) => {
       <p><strong>MTIC (custo total):</strong> ${mtic || "—"}</p>
       <p><strong>Poupança mensal:</strong> ${poupancaMensal || "—"}</p>
     `;
-    // ── Email interno para a FinMais ──
-    await brevo.sendTransacEmail({
-      sender: { name: "FinMais", email: "geral@finmais.pt" },
-      to: [{ email: "geral@finmais.pt" }, { email: "geral.finmais@gmail.com" }],
+    // ── Email interno para a FinMais (dois destinatários em chamadas separadas) ──
+    const emailConsolidadoPayload = {
+      sender: { name: "FinMais Leads", email: "geral.finmais@gmail.com" },
       subject: `Novo pedido Crédito Consolidado — ${nome}`,
       htmlContent: htmlInterno
-    });
+    };
+    await brevo.sendTransacEmail({ ...emailConsolidadoPayload, to: [{ email: "geral@finmais.pt" }] });
+    await brevo.sendTransacEmail({ ...emailConsolidadoPayload, to: [{ email: "geral.finmais@gmail.com" }] });
 
     // ── Email de confirmação ao cliente ──
     const horarioTexto = horario && horario !== "Qualquer hora"
