@@ -429,10 +429,10 @@ app.post("/admin/invite", async (req, res) => {
           <h2 style="color: #2c2c2c; font-weight: normal;">Olá, ${client.name}</h2>
           <p style="line-height: 1.7; color: #555;">Foi criada a sua área reservada na Fin+. Aqui poderá acompanhar o estado do seu processo e enviar documentos de forma segura.</p>
           <div style="text-align: center; margin: 35px 0;">
-            <a href="${activationLink}" style="background: #978E58; color: white; padding: 14px 32px; text-decoration: none; font-size: 15px; letter-spacing: 1px; display: inline-block;">ATIVAR ACESSO</a>
+            <a href="${activationLink}" style="background: #978E58; color: white; padding: 14px 32px; text-decoration: none; font-size: 15px; letter-spacing: 1px; display: inline-block;" clicktracking="off">ATIVAR ACESSO</a>
           </div>
           <p style="font-size: 13px; color: #999; line-height: 1.6;">Este link é válido por 7 dias. Se não solicitou este acesso, ignore este email.</p>
-          <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 30px 0;">
+          <p style="font-size: 11px; color: #ccc; line-height: 1.8; word-break: break-all;">Se o botão não funcionar, copia este link:<br>${activationLink}</p>
           <p style="font-size: 12px; color: #bbb; text-align: center;">Fin+ · Intermediário de Crédito · Registo BdP nº 0008693</p>
         </div>
       `,
