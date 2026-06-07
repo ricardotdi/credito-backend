@@ -433,7 +433,7 @@ app.post("/admin/invite", async (req, res) => {
           </div>
           <p style="font-size: 13px; color: #999; line-height: 1.6;">Este link é válido por 7 dias. Se não solicitou este acesso, ignore este email.</p>
           <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 30px 0;">
-          <p style="font-size: 12px; color: #bbb; text-align: center;">Fin+ · Intermediário de Crédito · Registro BdP nº 0008693</p>
+          <p style="font-size: 12px; color: #bbb; text-align: center;">Fin+ · Intermediário de Crédito · Registo BdP nº 0008693</p>
         </div>
       `,
     });
