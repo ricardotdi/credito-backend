@@ -464,7 +464,7 @@ app.post("/client/activate", (req, res) => {
 // Redirecionar /activate?token=xxx para o ficheiro HTML do cliente
 app.get("/activate", (req, res) => {
   const { token } = req.query;
-  const siteUrl = process.env.SITE_URL || "https://ricardotdi.github.io/upload/finmais-upload.html";
+  const siteUrl = process.env.SITE_URL || "https://ricardotdi.github.io/widget-credito/finmais-upload.html";
   res.redirect(`${siteUrl}?token=${token}`);
 });
 
