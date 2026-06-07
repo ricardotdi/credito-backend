@@ -461,6 +461,13 @@ app.post("/client/activate", (req, res) => {
   res.json({ success: true, message: "Conta ativada com sucesso" });
 });
 
+// Redirecionar /activate?token=xxx para o ficheiro HTML do cliente
+app.get("/activate", (req, res) => {
+  const { token } = req.query;
+  const siteUrl = process.env.SITE_URL || "https://ricardotdi.github.io/upload/finmais-upload.html";
+  res.redirect(`${siteUrl}?token=${token}`);
+});
+
 app.get("/client/check-token", (req, res) => {
   const { token } = req.query;
   const data = loadData();
