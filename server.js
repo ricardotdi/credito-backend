@@ -388,6 +388,128 @@ app.post("/send-email-consolidado", async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────
+// ROTA CRÉDITO MULTIOPÇÕES
+// ─────────────────────────────────────────────
+app.post("/send-email-multiopcoes", async (req, res) => {
+  try {
+    const {
+      nome, email, telefone, horario,
+      finalidade,
+      hipotecaInscrita, capitalAtual, prazoRemanescente,
+      idadeProponente1, idadeProponente2,
+      montanteLibertar, novoPrazo, tipoTaxa, dadosTaxa,
+      rendimentoLiquido, encargosAtuais,
+      capitalTotalFinanciado, novaPrestacao, prestacaoAtual,
+      tan, taeg, mtic, variacaoPrestacaoMensal,
+      dstiAntes, dstiDepois, dstiNovo
+    } = req.body;
+
+    const tipoLabel = { variavel: "Variável", fixa: "Fixa", mista: "Mista" }[tipoTaxa] || tipoTaxa;
+    let htmlTaxa = `<p><strong>Tipo de taxa:</strong> ${tipoLabel}</p>`;
+    if (tipoTaxa === "variavel") {
+      if (dadosTaxa?.euribor) htmlTaxa += `<p><strong>Taxa Euribor:</strong> ${dadosTaxa.euribor}</p>`;
+      if (dadosTaxa?.spread) htmlTaxa += `<p><strong>Spread:</strong> ${dadosTaxa.spread}</p>`;
+    } else if (tipoTaxa === "fixa") {
+      if (dadosTaxa?.tanFixo) htmlTaxa += `<p><strong>TAN fixo:</strong> ${dadosTaxa.tanFixo}</p>`;
+    } else if (tipoTaxa === "mista") {
+      htmlTaxa += `<p><strong>Fase fixa — Prazo:</strong> ${dadosTaxa?.prazoFixo || "—"} &nbsp;|&nbsp; <strong>TAN:</strong> ${dadosTaxa?.tanFixo || "—"}</p>`;
+      htmlTaxa += `<p><strong>Fase variável — Prazo:</strong> ${dadosTaxa?.prazoVar || "—"} &nbsp;|&nbsp; <strong>Euribor:</strong> ${dadosTaxa?.euribor || "—"} &nbsp;|&nbsp; <strong>Spread:</strong> ${dadosTaxa?.spread || "—"}</p>`;
+    }
+
+    const idadesTexto = idadeProponente2
+      ? `${idadeProponente1 || "—"} anos / ${idadeProponente2} anos`
+      : `${idadeProponente1 || "—"} anos`;
+
+    const htmlInterno = `
+      <h2 style="color:#A19276;">🔔 Novo pedido — Crédito Multiopções</h2>
+      <h3>Dados do cliente</h3>
+      <p><strong>Nome:</strong> ${nome}</p>
+      <p><strong>Email:</strong> ${email}</p>
+      <p><strong>Telemóvel:</strong> ${telefone}</p>
+      <p><strong>Horário preferencial:</strong> ${horario || "Qualquer hora"}</p>
+      <hr/>
+      <h3>Crédito habitação atual</h3>
+      <p><strong>Valor da hipoteca inscrita:</strong> ${hipotecaInscrita || "—"}</p>
+      <p><strong>Capital em dívida atual:</strong> ${capitalAtual || "—"}</p>
+      <p><strong>Prestação atual:</strong> ${prestacaoAtual || "—"}</p>
+      <p><strong>Prazo remanescente:</strong> ${prazoRemanescente || "—"}</p>
+      <p><strong>Idade dos proponentes:</strong> ${idadesTexto}</p>
+      <hr/>
+      <h3>Novo crédito multiopções</h3>
+      <p><strong>Finalidade:</strong> ${finalidade || "—"}</p>
+      <p><strong>Montante a libertar:</strong> ${montanteLibertar || "—"}</p>
+      <p><strong>Prazo pretendido:</strong> ${novoPrazo || "—"}</p>
+      ${htmlTaxa}
+      <hr/>
+      <h3>Rendimento</h3>
+      <p><strong>Rendimento líquido mensal:</strong> ${rendimentoLiquido || "—"}</p>
+      <p><strong>Encargos mensais atuais:</strong> ${encargosAtuais || "—"}</p>
+      <p><strong>Taxa de esforço antes (DSTI):</strong> ${dstiAntes || "—"}</p>
+      <p><strong>Taxa de esforço depois (DSTI):</strong> ${dstiDepois || "—"}</p>
+      <p><strong>DSTI do novo crédito (stress BdP):</strong> ${dstiNovo || "—"}</p>
+      <hr/>
+      <h3>Resultados da simulação</h3>
+      <p><strong>Capital total financiado:</strong> ${capitalTotalFinanciado || "—"}</p>
+      <p><strong>Nova prestação:</strong> ${novaPrestacao || "—"}</p>
+      <p><strong>TAN:</strong> ${tan || "—"}</p>
+      <p><strong>TAEG:</strong> ${taeg || "—"}</p>
+      <p><strong>MTIC (custo total):</strong> ${mtic || "—"}</p>
+      <p><strong>Variação da prestação mensal:</strong> ${variacaoPrestacaoMensal || "—"}</p>
+    `;
+
+    await brevo.sendTransacEmail({
+      sender: { name: "FinMais", email: "geral@finmais.pt" },
+      to: [{ email: "geral.finmais@gmail.com" }],
+      cc: [{ email: "geral@finmais.pt" }],
+      subject: `Novo pedido Crédito Multiopções — ${nome}`,
+      htmlContent: htmlInterno
+    });
+
+    const horarioTexto2 = horario && horario !== "Qualquer hora"
+      ? `, preferencialmente <strong>${horario}</strong>`
+      : "";
+
+    const htmlCliente = `
+      <div style="font-family:Arial,sans-serif; max-width:560px; margin:0 auto; color:#333;">
+        <h2 style="color:#A19276;">Recebemos o seu pedido!</h2>
+        <p>Olá <strong>${nome}</strong>,</p>
+        <p>Obrigado pelo seu contacto. Recebemos a sua simulação de Crédito Multiopções e entraremos em contacto consigo em breve${horarioTexto2}.</p>
+        <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
+        <h3 style="color:#A19276;">Resumo da sua simulação</h3>
+        <p><strong>Finalidade:</strong> ${finalidade || "—"}</p>
+        <p><strong>Montante a libertar:</strong> ${montanteLibertar || "—"}</p>
+        <p><strong>Prazo pretendido:</strong> ${novoPrazo || "—"}</p>
+        ${htmlTaxa}
+        <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
+        <h3 style="color:#A19276;">Resultado indicativo</h3>
+        <p><strong>Capital total financiado:</strong> ${capitalTotalFinanciado || "—"}</p>
+        <p><strong>Nova prestação mensal:</strong> ${novaPrestacao || "—"}</p>
+        <p><strong>Prestação atual:</strong> ${prestacaoAtual || "—"}</p>
+        <p><strong>Variação da prestação mensal:</strong> ${variacaoPrestacaoMensal || "—"}</p>
+        <p><strong>TAN:</strong> ${tan || "—"} &nbsp;|&nbsp; <strong>TAEG:</strong> ${taeg || "—"}</p>
+        <p><strong>MTIC (custo total estimado):</strong> ${mtic || "—"}</p>
+        <p><strong>Taxa de esforço antes:</strong> ${dstiAntes || "—"} &nbsp;→&nbsp; <strong>depois:</strong> ${dstiDepois || "—"}</p>
+        <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
+        <p style="font-size:12px; color:#999;">Valores meramente indicativos, sujeitos a análise e aprovação bancária.</p>
+        <p style="font-size:13px;">Com os melhores cumprimentos,<br/><strong>Equipa FinMais</strong></p>
+      </div>
+    `;
+
+    await brevo.sendTransacEmail({
+      sender: { name: "FinMais", email: "geral@finmais.pt" },
+      to: [{ email: email, name: nome }],
+      subject: "A sua simulação de Crédito Multiopções — FinMais",
+      htmlContent: htmlCliente
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Erro ao enviar email multiopções:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ═══════════════════════════════════════════════════════════
 //  NOVAS ROTAS — PORTAL DE CLIENTES
 // ═══════════════════════════════════════════════════════════
