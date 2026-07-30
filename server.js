@@ -8,11 +8,74 @@ const multer = require("multer");
 const nodemailer = require("nodemailer");
 const path = require("path");
 const fs = require("fs");
+const jwt = require("jsonwebtoken");
+const rateLimit = require("express-rate-limit");
 
 const app = express();
-app.use(cors());
+
+// ─────────────────────────────────────────────
+// CORS — restrito às origens conhecidas do Fin+
+// ─────────────────────────────────────────────
+const allowedOrigins = [
+  "https://ricardotdi.github.io",
+  "https://finmais.pt",
+  "https://www.finmais.pt",
+];
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+}));
+
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
+
+// ─────────────────────────────────────────────
+// JWT AUTH
+// ─────────────────────────────────────────────
+const JWT_SECRET = process.env.JWT_SECRET;
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Demasiadas tentativas de login. Tente novamente mais tarde." },
+});
+
+function getBearerToken(req) {
+  const header = req.headers.authorization || "";
+  return header.startsWith("Bearer ") ? header.slice(7) : null;
+}
+
+function requireAdminAuth(req, res, next) {
+  const token = getBearerToken(req);
+  if (!token) return res.status(401).json({ success: false, message: "Não autenticado" });
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    if (payload.role !== "admin") throw new Error("role inválido");
+    next();
+  } catch {
+    res.status(401).json({ success: false, message: "Sessão inválida ou expirada" });
+  }
+}
+
+function requireClientAuth(req, res, next) {
+  const token = getBearerToken(req);
+  if (!token) return res.status(401).json({ success: false, message: "Não autenticado" });
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    if (payload.role !== "client") throw new Error("role inválido");
+    req.clientAuth = payload;
+    next();
+  } catch {
+    res.status(401).json({ success: false, message: "Sessão inválida ou expirada" });
+  }
+}
 
 // ─────────────────────────────────────────────
 // BREVO CONFIG (SDK — widgets existentes)
@@ -517,16 +580,17 @@ app.post("/send-email-multiopcoes", async (req, res) => {
 // ─────────────────────────────────────────────
 // AUTH
 // ─────────────────────────────────────────────
-app.post("/admin/login", (req, res) => {
+app.post("/admin/login", loginLimiter, (req, res) => {
   const { password } = req.body;
   if (password === process.env.ADMIN_PASSWORD) {
-    res.json({ success: true });
+    const token = jwt.sign({ role: "admin" }, JWT_SECRET, { expiresIn: "12h" });
+    res.json({ success: true, token });
   } else {
     res.status(401).json({ success: false, message: "Password incorreta" });
   }
 });
 
-app.post("/client/login", (req, res) => {
+app.post("/client/login", loginLimiter, (req, res) => {
   const { email, password } = req.body;
   const data = loadData();
   const client = data.clients.find(c => c.email === email);
@@ -534,13 +598,14 @@ app.post("/client/login", (req, res) => {
   if (!client.passwordHash) return res.status(401).json({ success: false, message: "Conta não ativada" });
   const hash = crypto.createHash("sha256").update(password).digest("hex");
   if (hash !== client.passwordHash) return res.status(401).json({ success: false, message: "Password incorreta" });
-  res.json({ success: true, client: { id: client.id, name: client.name, email: client.email } });
+  const token = jwt.sign({ role: "client", clientId: client.id, email: client.email }, JWT_SECRET, { expiresIn: "24h" });
+  res.json({ success: true, token, client: { id: client.id, name: client.name, email: client.email } });
 });
 
 // ─────────────────────────────────────────────
 // CONVITES
 // ─────────────────────────────────────────────
-app.post("/admin/invite", async (req, res) => {
+app.post("/admin/invite", requireAdminAuth, async (req, res) => {
   const { clientId } = req.body;
   const data = loadData();
   const client = data.clients.find(c => c.id === clientId);
@@ -621,12 +686,12 @@ app.get("/client/check-token", (req, res) => {
 // ─────────────────────────────────────────────
 // CLIENTES (ADMIN PORTAL)
 // ─────────────────────────────────────────────
-app.get("/admin/clients", (req, res) => {
+app.get("/admin/clients", requireAdminAuth, (req, res) => {
   const data = loadData();
   res.json(data.clients);
 });
 
-app.post("/admin/clients", (req, res) => {
+app.post("/admin/clients", requireAdminAuth, (req, res) => {
   const { name, email, phone, concelho, processNumber } = req.body;
   const data = loadData();
   if (data.clients.find(c => c.email === email)) {
@@ -655,7 +720,7 @@ app.post("/admin/clients", (req, res) => {
   res.json({ success: true, client });
 });
 
-app.put("/admin/clients/:id", (req, res) => {
+app.put("/admin/clients/:id", requireAdminAuth, (req, res) => {
   const data = loadData();
   const idx = data.clients.findIndex(c => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false });
@@ -664,7 +729,7 @@ app.put("/admin/clients/:id", (req, res) => {
   res.json({ success: true, client: data.clients[idx] });
 });
 
-app.delete("/admin/clients/:id", (req, res) => {
+app.delete("/admin/clients/:id", requireAdminAuth, (req, res) => {
   const data = loadData();
   data.clients = data.clients.filter(c => c.id !== req.params.id);
   saveData(data);
@@ -674,7 +739,7 @@ app.delete("/admin/clients/:id", (req, res) => {
 // ─────────────────────────────────────────────
 // PROCESSOS
 // ─────────────────────────────────────────────
-app.put("/admin/clients/:clientId/processes/:processId/step", (req, res) => {
+app.put("/admin/clients/:clientId/processes/:processId/step", requireAdminAuth, (req, res) => {
   const { step } = req.body;
   const data = loadData();
   const client = data.clients.find(c => c.id === req.params.clientId);
@@ -686,7 +751,7 @@ app.put("/admin/clients/:clientId/processes/:processId/step", (req, res) => {
   res.json({ success: true });
 });
 
-app.post("/admin/clients/:clientId/processes", (req, res) => {
+app.post("/admin/clients/:clientId/processes", requireAdminAuth, (req, res) => {
   const { number } = req.body;
   const data = loadData();
   const client = data.clients.find(c => c.id === req.params.clientId);
@@ -708,7 +773,7 @@ app.post("/admin/clients/:clientId/processes", (req, res) => {
 // ─────────────────────────────────────────────
 // JANELAS DE UPLOAD
 // ─────────────────────────────────────────────
-app.post("/admin/clients/:clientId/processes/:processId/upload-windows", (req, res) => {
+app.post("/admin/clients/:clientId/processes/:processId/upload-windows", requireAdminAuth, (req, res) => {
   const { start, end, note } = req.body;
   const data = loadData();
   const client = data.clients.find(c => c.id === req.params.clientId);
@@ -721,7 +786,7 @@ app.post("/admin/clients/:clientId/processes/:processId/upload-windows", (req, r
   res.json({ success: true, window: win });
 });
 
-app.delete("/admin/clients/:clientId/processes/:processId/upload-windows/:windowId", (req, res) => {
+app.delete("/admin/clients/:clientId/processes/:processId/upload-windows/:windowId", requireAdminAuth, (req, res) => {
   const data = loadData();
   const client = data.clients.find(c => c.id === req.params.clientId);
   if (!client) return res.status(404).json({ success: false });
@@ -735,8 +800,11 @@ app.delete("/admin/clients/:clientId/processes/:processId/upload-windows/:window
 // ─────────────────────────────────────────────
 // ÁREA DO CLIENTE
 // ─────────────────────────────────────────────
-app.get("/client/me", (req, res) => {
+app.get("/client/me", requireClientAuth, (req, res) => {
   const { email } = req.query;
+  if (email !== req.clientAuth.email) {
+    return res.status(403).json({ success: false, message: "Acesso negado" });
+  }
   const data = loadData();
   const client = data.clients.find(c => c.email === email);
   if (!client) return res.status(404).json({ success: false });
@@ -747,8 +815,11 @@ app.get("/client/me", (req, res) => {
 // ─────────────────────────────────────────────
 // UPLOAD DE DOCUMENTOS (portal novo)
 // ─────────────────────────────────────────────
-app.post("/upload", upload.array("files", 10), async (req, res) => {
+app.post("/upload", requireClientAuth, upload.array("files", 10), async (req, res) => {
   const { clientEmail, clientName, processNumber } = req.body;
+  if (clientEmail !== req.clientAuth.email) {
+    return res.status(403).json({ success: false, message: "Acesso negado" });
+  }
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ success: false, message: "Nenhum ficheiro recebido" });
   }
@@ -793,7 +864,7 @@ app.post("/upload", upload.array("files", 10), async (req, res) => {
 // ─────────────────────────────────────────────
 // EXPORTAÇÃO CSV
 // ─────────────────────────────────────────────
-app.get("/admin/export", (req, res) => {
+app.get("/admin/export", requireAdminAuth, (req, res) => {
   const data = loadData();
   const rows = data.clients.map(c => {
     const lastProc = c.processes?.[c.processes.length - 1];
