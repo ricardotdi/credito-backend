@@ -266,11 +266,15 @@ app.post("/send-email", async (req, res) => {
         ? ", preferencialmente <strong>" + horario + "</strong>"
         : "";
 
+      const introTexto = temResumo
+        ? `Obrigado pelo seu contacto. Recebemos a sua simulação${simulador ? ` de <strong>${simulador}</strong>` : ""} e entraremos em contacto consigo em breve${horarioTexto} através do número <strong>${telefone || "indicado"}</strong>.`
+        : `Obrigado por nos contactar. Entraremos em contacto consigo em breve${horarioTexto} através do número <strong>${telefone || "indicado"}</strong>.`;
+
       const htmlCliente = `
         <div style="font-family:Arial,sans-serif; max-width:560px; margin:0 auto; color:#333;">
           <h2 style="color:#A19276;">Recebemos o seu pedido!</h2>
           <p>Olá <strong>${nome}</strong>,</p>
-          <p>Obrigado pelo seu contacto. Recebemos a sua simulação${simulador ? ` de <strong>${simulador}</strong>` : ""} e entraremos em contacto consigo em breve${horarioTexto} através do número <strong>${telefone || "indicado"}</strong>.</p>
+          <p>${introTexto}</p>
           ${mensagem ? `<p><strong>O seu assunto:</strong> ${mensagem}</p>` : ""}
           ${temResumo ? `
             <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
@@ -279,6 +283,7 @@ app.post("/send-email", async (req, res) => {
           ` : ""}
           <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
           <p style="font-size:12px; color:#999;">Os seus dados são tratados de forma confidencial e não serão partilhados com terceiros.</p>
+          <p style="font-size:12px; color:#999;">Não responda a este email. Para contacto direto, envie um email para <a href="mailto:geral@finmais.pt" style="color:#999;">geral@finmais.pt</a> ou ligue para o 911 511 908.</p>
           <p style="font-size:13px;">Com os melhores cumprimentos,<br/><strong>Equipa FinMais</strong></p>
         </div>
       `;
@@ -286,7 +291,7 @@ app.post("/send-email", async (req, res) => {
       await brevo.sendTransacEmail({
         sender: { name: "FinMais", email: "geral@finmais.pt" },
         to: [{ email: email, name: nome }],
-        subject: "A sua simulação FinMais — confirmação de pedido",
+        subject: temResumo ? "A sua simulação FinMais — confirmação de pedido" : "O seu contacto FinMais — confirmação de receção",
         htmlContent: htmlCliente
       });
     }
