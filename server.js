@@ -112,12 +112,25 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 20 * 1024 * 1024 } });
 
 // ─────────────────────────────────────────────
-// PORTAL — Storage JSON local
+// PORTAL — Storage JSON
 // ─────────────────────────────────────────────
-const DATA_FILE = path.join(__dirname, "data.json");
+// Definir DATA_FILE para um caminho dentro do disco persistente do Render
+// (ex.: /var/data/data.json). Sem isso o ficheiro fica na pasta da aplicação,
+// que é refeita de raiz a cada deploy — e os clientes e convites desaparecem.
+const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, "data.json");
+
+if (!process.env.DATA_FILE) {
+  console.warn(
+    "AVISO: DATA_FILE não definido. Os dados do portal estão em " + DATA_FILE +
+    " e serão apagados no próximo deploy. Monte um disco no Render e defina DATA_FILE."
+  );
+} else {
+  console.log("Dados do portal em " + DATA_FILE);
+}
 
 function loadData() {
   if (!fs.existsSync(DATA_FILE)) {
+    fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
     fs.writeFileSync(DATA_FILE, JSON.stringify({ clients: [], invites: [] }, null, 2));
   }
   return JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
