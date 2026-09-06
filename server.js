@@ -39,8 +39,11 @@ app.use(cors({
   },
 }));
 
-app.use(bodyParser.json({ limit: "50mb" }));
-app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
+// 1mb chega com folga: os maiores pedidos JSON são as simulações, com poucos
+// KB. Os ficheiros do portal não passam por aqui, vão pelo multer em multipart,
+// que tem o seu próprio limite de 20mb por ficheiro.
+app.use(bodyParser.json({ limit: "1mb" }));
+app.use(bodyParser.urlencoded({ limit: "1mb", extended: true }));
 
 // ─────────────────────────────────────────────
 // JWT AUTH
@@ -950,6 +953,29 @@ app.get("/admin/export", requireAdminAuth, (req, res) => {
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
   res.setHeader("Content-Disposition", 'attachment; filename="clientes-finmais.csv"');
   res.send("\uFEFF" + csv);
+});
+
+// ─────────────────────────────────────────────
+// TRATAMENTO DE ERROS
+// ─────────────────────────────────────────────
+// Sem isto, o erro do CORS caía no handler por omissão do Express e devolvia
+// um 500 em HTML, sem dizer o que se passava. Custou um diagnóstico longo
+// quando o portal mudou de endereço e a origem nova ainda não estava na lista.
+app.use((err, req, res, next) => {
+  if (err && err.message === "Not allowed by CORS") {
+    console.warn(`CORS: origem recusada "${req.headers.origin}" em ${req.method} ${req.path}`);
+    return res.status(403).json({
+      success: false,
+      message: "Origem não autorizada. Se este pedido vem de um site da Fin+, é preciso acrescentar a origem à lista permitida no backend.",
+    });
+  }
+
+  if (err && err.type === "entity.too.large") {
+    return res.status(413).json({ success: false, message: "Pedido demasiado grande." });
+  }
+
+  console.error("Erro não tratado:", err);
+  res.status(500).json({ success: false, message: "Erro interno do servidor." });
 });
 
 // ─────────────────────────────────────────────
