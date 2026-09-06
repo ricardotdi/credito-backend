@@ -10,8 +10,13 @@ const path = require("path");
 const fs = require("fs");
 const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
+const https = require("https");
 
 const app = express();
+
+// O Render corre atrás de um proxy — sem isto o rate limit e o remoteip do
+// Turnstile veem sempre o mesmo IP para todos os visitantes.
+app.set("trust proxy", 1);
 
 // ─────────────────────────────────────────────
 // CORS — restrito às origens conhecidas do Fin+
@@ -201,9 +206,154 @@ app.get("/validar-token", async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// ANTI-SPAM DOS FORMULÁRIOS (rate limit + honeypot + Turnstile + escaping)
+// ─────────────────────────────────────────────
+const TURNSTILE_SECRET = process.env.TURNSTILE_SECRET;
+// Modo suave por omissão: um token em falta apenas gera aviso no log.
+// Só depois de o frontend estar em produção é que se põe TURNSTILE_ENFORCE=true.
+const TURNSTILE_ENFORCE = process.env.TURNSTILE_ENFORCE === "true";
+
+const leadLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Demasiados pedidos enviados. Tente novamente dentro de alguns minutos." },
+});
+
+// Valida o token do Cloudflare Turnstile. Usa o módulo https nativo para não
+// depender da versão de Node do Render (fetch global só existe a partir do 18).
+function verifyTurnstile(token, ip) {
+  return new Promise((resolve) => {
+    if (!TURNSTILE_SECRET || !token) return resolve(false);
+    const payload = new URLSearchParams({
+      secret: TURNSTILE_SECRET,
+      response: token,
+      ...(ip ? { remoteip: ip } : {}),
+    }).toString();
+
+    const request = https.request({
+      hostname: "challenges.cloudflare.com",
+      path: "/turnstile/v0/siteverify",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Length": Buffer.byteLength(payload),
+      },
+      timeout: 8000,
+    }, (response) => {
+      let body = "";
+      response.on("data", (chunk) => { body += chunk; });
+      response.on("end", () => {
+        try {
+          resolve(JSON.parse(body).success === true);
+        } catch (e) {
+          console.error("Turnstile: resposta inválida", body);
+          resolve(false);
+        }
+      });
+    });
+
+    request.on("timeout", () => { request.destroy(); resolve(false); });
+    request.on("error", (err) => { console.error("Turnstile: erro de rede", err.message); resolve(false); });
+    request.write(payload);
+    request.end();
+  });
+}
+
+// Escapa HTML. Não escapa a plica, para não estragar nomes tipo O'Brien nos
+// emails — todos os campos são interpolados em texto, nunca dentro de atributos.
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// Escapa recursivamente todas as strings do corpo do pedido, exceto o email
+// (que é validado por regex e usado como endereço de destino real).
+function escapeBody(value, key) {
+  if (typeof value === "string") return key === "email" ? value : escHtml(value);
+  if (Array.isArray(value)) return value.map((v) => escapeBody(v));
+  if (value && typeof value === "object") {
+    const out = {};
+    for (const k of Object.keys(value)) out[k] = escapeBody(value[k], k);
+    return out;
+  }
+  return value;
+}
+
+// A plica é permitida (o'brien@exemplo.pt é válido); só bloqueamos os
+// caracteres que teriam significado em HTML, já que o email não é escapado.
+const EMAIL_RE = /^[^\s@<>"&]+@[^\s@<>"&,]+\.[a-zA-Z]{2,}$/;
+const TELEFONE_RE = /^[\d\s+().-]{6,25}$/;
+
+// Resposta de falso sucesso: o bot fica convencido de que passou e não tenta
+// variações, mas nenhum email é enviado.
+function fakeSuccess(res, motivo, req) {
+  console.warn(`Lead bloqueada (${motivo}) — IP ${req.ip}`);
+  return res.json({ success: true });
+}
+
+async function leadGuard(req, res, next) {
+  const body = req.body || {};
+
+  // 1. Honeypot — campo escondido que só um bot preenche.
+  if (typeof body.website === "string" && body.website.trim() !== "") {
+    return fakeSuccess(res, "honeypot", req);
+  }
+
+  // 2. Tempo mínimo entre carregar a página e submeter.
+  const ts = Number(body.ts);
+  if (ts && Date.now() - ts < 3000) {
+    return fakeSuccess(res, "submissão demasiado rápida", req);
+  }
+
+  // 3. Validação básica dos campos.
+  const nome = typeof body.nome === "string" ? body.nome.trim() : "";
+  const email = typeof body.email === "string" ? body.email.trim() : "";
+  const telefone = typeof body.telefone === "string" ? body.telefone.trim() : "";
+  const mensagem = typeof body.mensagem === "string" ? body.mensagem : "";
+
+  if (nome.length < 2 || nome.length > 80) {
+    return res.status(400).json({ success: false, message: "Nome inválido." });
+  }
+  if (/https?:|:\/\/|[\r\n]/i.test(nome) || /https?:|:\/\/|[\r\n]/i.test(telefone)) {
+    return fakeSuccess(res, "links no nome/telefone", req);
+  }
+  if (email && !EMAIL_RE.test(email)) {
+    return res.status(400).json({ success: false, message: "Email inválido." });
+  }
+  if (telefone && !TELEFONE_RE.test(telefone)) {
+    return res.status(400).json({ success: false, message: "Telefone inválido." });
+  }
+  if (mensagem.length > 2000) {
+    return res.status(400).json({ success: false, message: "Mensagem demasiado longa." });
+  }
+
+  // 4. Turnstile.
+  const ok = await verifyTurnstile(body.turnstileToken, req.ip);
+  if (!ok) {
+    if (TURNSTILE_ENFORCE) {
+      return res.status(403).json({ success: false, message: "Verificação de segurança falhou. Recarregue a página e tente novamente." });
+    }
+    console.warn(`Turnstile sem validação (modo suave) — IP ${req.ip}`);
+  }
+
+  // Campos de controlo não devem chegar aos emails.
+  delete body.website;
+  delete body.ts;
+  delete body.turnstileToken;
+
+  req.body = escapeBody(body);
+  next();
+}
+
+// ─────────────────────────────────────────────
 // ROTA LEADS
 // ─────────────────────────────────────────────
-app.post("/send-email", async (req, res) => {
+app.post("/send-email", leadLimiter, leadGuard, async (req, res) => {
   try {
     const {
       nome, email, telefone, horario, simulador, mensagem,
@@ -343,7 +493,7 @@ app.post("/send-documents", async (req, res) => {
 // ─────────────────────────────────────────────
 // ROTA CRÉDITO CONSOLIDADO
 // ─────────────────────────────────────────────
-app.post("/send-email-consolidado", async (req, res) => {
+app.post("/send-email-consolidado", leadLimiter, leadGuard, async (req, res) => {
   try {
     const {
       nome, email, telefone, horario,
@@ -459,7 +609,7 @@ app.post("/send-email-consolidado", async (req, res) => {
 // ─────────────────────────────────────────────
 // ROTA CRÉDITO MULTIOPÇÕES
 // ─────────────────────────────────────────────
-app.post("/send-email-multiopcoes", async (req, res) => {
+app.post("/send-email-multiopcoes", leadLimiter, leadGuard, async (req, res) => {
   try {
     const {
       nome, email, telefone, horario,
