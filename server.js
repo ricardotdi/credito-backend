@@ -24,6 +24,10 @@ const allowedOrigins = [
   "https://ricardotdi.github.io",
   "https://finmais.pt",
   "https://www.finmais.pt",
+  // Portal de clientes e página de admin. O endereço do GitHub Pages passou a
+  // redireccionar para aqui, pelo que o browser envia esta origem — sem ela o
+  // login do portal rebentava com 500 antes sequer de validar a password.
+  "https://links.finmais.pt",
 ];
 app.use(cors({
   origin: (origin, callback) => {
