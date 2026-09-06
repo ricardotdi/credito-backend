@@ -128,6 +128,11 @@ if (!process.env.DATA_FILE) {
   console.log("Dados do portal em " + DATA_FILE);
 }
 
+// Endereço público do portal de clientes, usado nos links de activação
+// enviados por email. Definir PORTAL_URL para mudar de endereço sem tocar no
+// código — é o que o cliente vê, por isso deve ser um domínio finmais.pt.
+const PORTAL_URL = process.env.PORTAL_URL || "https://links.finmais.pt/finmais-upload.html";
+
 function loadData() {
   if (!fs.existsSync(DATA_FILE)) {
     fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
@@ -680,7 +685,10 @@ app.post("/admin/invite", requireAdminAuth, async (req, res) => {
   data.invites.push({ clientId, token, expires });
   saveData(data);
 
-  const activationLink = `${process.env.SITE_URL || "https://credito-backend-ffnk.onrender.com"}/activate?token=${token}`;
+  // Aponta directamente para o portal, em vez de passar pelo /activate deste
+  // backend: o cliente vê um endereço finmais.pt em vez do onrender.com, e
+  // poupa-se um reencaminhamento.
+  const activationLink = `${PORTAL_URL}?token=${token}`;
 
   try {
     await transporter.sendMail({
@@ -727,11 +735,11 @@ app.post("/client/activate", (req, res) => {
   res.json({ success: true, message: "Conta ativada com sucesso" });
 });
 
-// Redirecionar /activate?token=xxx para o ficheiro HTML do cliente
+// Mantido apenas para os convites já enviados, que ainda apontam para aqui.
+// Os convites novos vão directos para o PORTAL_URL.
 app.get("/activate", (req, res) => {
   const { token } = req.query;
-  const siteUrl = process.env.SITE_URL || "https://ricardotdi.github.io/widget-credito/finmais-upload.html";
-  res.redirect(`${siteUrl}?token=${token}`);
+  res.redirect(`${PORTAL_URL}?token=${encodeURIComponent(token || "")}`);
 });
 
 app.get("/client/check-token", (req, res) => {
