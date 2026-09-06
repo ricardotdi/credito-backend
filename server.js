@@ -148,6 +148,53 @@ function saveData(data) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 }
 
+// ─────────────────────────────────────────────
+// PASSWORDS DO PORTAL
+// ─────────────────────────────────────────────
+// O scrypt vem no próprio Node, por isso não acrescenta dependências nem risco
+// de compilação no Render. Ao contrário do SHA-256 que aqui estava, é lento e
+// usa salt por conta, o que torna inviável atacar o ficheiro com tabelas
+// pré-calculadas caso ele alguma vez escape.
+const SCRYPT_KEYLEN = 64;
+const PASSWORD_MIN = 8;
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const derived = crypto.scryptSync(password, salt, SCRYPT_KEYLEN).toString("hex");
+  return `scrypt$${salt}$${derived}`;
+}
+
+// Aceita os dois formatos: o novo, e o SHA-256 sem salt das contas antigas.
+// Devolve também se a conta precisa de ser reconvertida.
+function verifyPassword(password, stored) {
+  if (typeof stored !== "string" || !stored) return { ok: false, precisaAtualizar: false };
+
+  if (stored.startsWith("scrypt$")) {
+    const partes = stored.split("$");
+    if (partes.length !== 3) return { ok: false, precisaAtualizar: false };
+    const derived = crypto.scryptSync(password, partes[1], SCRYPT_KEYLEN);
+    const esperado = Buffer.from(partes[2], "hex");
+    const ok = derived.length === esperado.length && crypto.timingSafeEqual(derived, esperado);
+    return { ok, precisaAtualizar: false };
+  }
+
+  const legado = crypto.createHash("sha256").update(password).digest("hex");
+  const a = Buffer.from(legado);
+  const b = Buffer.from(stored);
+  const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
+  return { ok, precisaAtualizar: ok };
+}
+
+// Comparação de duração constante, para a password de administrador que vive
+// numa variável de ambiente. O risco prático de um ataque por tempo através da
+// rede é baixo, ainda mais com o limitador de tentativas, mas não custa nada.
+function comparacaoSegura(a, b) {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  const ba = Buffer.from(a);
+  const bb = Buffer.from(b);
+  return ba.length === bb.length && crypto.timingSafeEqual(ba, bb);
+}
+
 function isWindowActive(w) {
   const now = new Date();
   return new Date(w.start) <= now && new Date(w.end) >= now;
@@ -652,7 +699,7 @@ app.post("/send-email-multiopcoes", leadLimiter, leadGuard, async (req, res) => 
 // ─────────────────────────────────────────────
 app.post("/admin/login", loginLimiter, (req, res) => {
   const { password } = req.body;
-  if (password === process.env.ADMIN_PASSWORD) {
+  if (comparacaoSegura(password, process.env.ADMIN_PASSWORD)) {
     const token = jwt.sign({ role: "admin" }, JWT_SECRET, { expiresIn: "12h" });
     res.json({ success: true, token });
   } else {
@@ -666,8 +713,18 @@ app.post("/client/login", loginLimiter, (req, res) => {
   const client = data.clients.find(c => c.email === email);
   if (!client) return res.status(401).json({ success: false, message: "Email não encontrado" });
   if (!client.passwordHash) return res.status(401).json({ success: false, message: "Conta não ativada" });
-  const hash = crypto.createHash("sha256").update(password).digest("hex");
-  if (hash !== client.passwordHash) return res.status(401).json({ success: false, message: "Password incorreta" });
+
+  const { ok, precisaAtualizar } = verifyPassword(password || "", client.passwordHash);
+  if (!ok) return res.status(401).json({ success: false, message: "Password incorreta" });
+
+  // Conta criada antes do scrypt: agora que sabemos que a password está
+  // correcta, guardamos o formato novo. O cliente não dá por nada.
+  if (precisaAtualizar) {
+    client.passwordHash = hashPassword(password);
+    saveData(data);
+    console.log(`Password do cliente ${client.email} convertida para scrypt`);
+  }
+
   const token = jwt.sign({ role: "client", clientId: client.id, email: client.email }, JWT_SECRET, { expiresIn: "24h" });
   res.json({ success: true, token, client: { id: client.id, name: client.name, email: client.email } });
 });
@@ -731,7 +788,11 @@ app.post("/client/activate", (req, res) => {
   const client = data.clients.find(c => c.id === invite.clientId);
   if (!client) return res.status(404).json({ success: false, message: "Cliente não encontrado" });
 
-  client.passwordHash = crypto.createHash("sha256").update(password).digest("hex");
+  if (typeof password !== "string" || password.length < PASSWORD_MIN) {
+    return res.status(400).json({ success: false, message: `A password tem de ter pelo menos ${PASSWORD_MIN} caracteres.` });
+  }
+
+  client.passwordHash = hashPassword(password);
   client.activated = true;
   data.invites = data.invites.filter(i => i.token !== token);
   saveData(data);
