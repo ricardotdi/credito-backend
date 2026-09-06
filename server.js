@@ -13,7 +13,7 @@ const https = require("https");
 
 const app = express();
 
-// O Render corre atrás de um proxy — sem isto o rate limit e o remoteip do
+// O Render corre atrás de um proxy. Sem isto o rate limit e o remoteip do
 // Turnstile veem sempre o mesmo IP para todos os visitantes.
 app.set("trust proxy", 1);
 
@@ -25,7 +25,7 @@ const allowedOrigins = [
   "https://finmais.pt",
   "https://www.finmais.pt",
   // Portal de clientes e página de admin. O endereço do GitHub Pages passou a
-  // redireccionar para aqui, pelo que o browser envia esta origem — sem ela o
+  // redireccionar para aqui, pelo que o browser envia esta origem. Sem ela o
   // login do portal rebentava com 500 antes sequer de validar a password.
   "https://links.finmais.pt",
 ];
@@ -115,11 +115,11 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 20 * 1024 * 1024 } });
 
 // ─────────────────────────────────────────────
-// PORTAL — Storage JSON
+// PORTAL: armazenamento em JSON
 // ─────────────────────────────────────────────
 // Definir DATA_FILE para um caminho dentro do disco persistente do Render
 // (ex.: /var/data/data.json). Sem isso o ficheiro fica na pasta da aplicação,
-// que é refeita de raiz a cada deploy — e os clientes e convites desaparecem.
+// que é refeita de raiz a cada deploy, e os clientes e convites desaparecem.
 const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, "data.json");
 
 if (!process.env.DATA_FILE) {
@@ -133,7 +133,7 @@ if (!process.env.DATA_FILE) {
 
 // Endereço público do portal de clientes, usado nos links de activação
 // enviados por email. Definir PORTAL_URL para mudar de endereço sem tocar no
-// código — é o que o cliente vê, por isso deve ser um domínio finmais.pt.
+// código. É o que o cliente vê, por isso deve ser um domínio finmais.pt.
 const PORTAL_URL = process.env.PORTAL_URL || "https://links.finmais.pt/finmais-upload.html";
 
 function loadData() {
@@ -214,7 +214,7 @@ function verifyTurnstile(token, ip) {
 }
 
 // Escapa HTML. Não escapa a plica, para não estragar nomes tipo O'Brien nos
-// emails — todos os campos são interpolados em texto, nunca dentro de atributos.
+// emails, já que todos os campos são interpolados em texto, nunca dentro de atributos.
 function escHtml(str) {
   return String(str)
     .replace(/&/g, "&amp;")
@@ -244,14 +244,14 @@ const TELEFONE_RE = /^[\d\s+().-]{6,25}$/;
 // Resposta de falso sucesso: o bot fica convencido de que passou e não tenta
 // variações, mas nenhum email é enviado.
 function fakeSuccess(res, motivo, req) {
-  console.warn(`Lead bloqueada (${motivo}) — IP ${req.ip}`);
+  console.warn(`Lead bloqueada (${motivo}), IP ${req.ip}`);
   return res.json({ success: true });
 }
 
 async function leadGuard(req, res, next) {
   const body = req.body || {};
 
-  // 1. Honeypot — campo escondido que só um bot preenche.
+  // 1. Honeypot: campo escondido que só um bot preenche.
   if (typeof body.website === "string" && body.website.trim() !== "") {
     return fakeSuccess(res, "honeypot", req);
   }
@@ -290,7 +290,7 @@ async function leadGuard(req, res, next) {
     if (TURNSTILE_ENFORCE) {
       return res.status(403).json({ success: false, message: "Verificação de segurança falhou. Recarregue a página e tente novamente." });
     }
-    console.warn(`Turnstile sem validação (modo suave) — IP ${req.ip}`);
+    console.warn(`Turnstile sem validação (modo suave), IP ${req.ip}`);
   }
 
   // Campos de controlo não devem chegar aos emails.
