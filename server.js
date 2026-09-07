@@ -188,6 +188,16 @@ function verifyPassword(password, stored) {
 // Comparação de duração constante, para a password de administrador que vive
 // numa variável de ambiente. O risco prático de um ataque por tempo através da
 // rede é baixo, ainda mais com o limitador de tentativas, mas não custa nada.
+// O Excel e o LibreOffice interpretam como fórmula qualquer célula começada
+// por =, +, - ou @. Um valor como =HYPERLINK(...) num nome de cliente passaria
+// a correr quando o ficheiro exportado fosse aberto. A plica inicial força o
+// tratamento como texto e não é mostrada pelas folhas de cálculo.
+function csvSeguro(valor) {
+  const texto = (valor === null || valor === undefined ? "" : valor).toString();
+  const perigoso = /^[=+\-@\t\r]/.test(texto);
+  return (perigoso ? "'" + texto : texto).replace(/"/g, '""');
+}
+
 function comparacaoSegura(a, b) {
   if (typeof a !== "string" || typeof b !== "string") return false;
   const ba = Buffer.from(a);
@@ -858,13 +868,29 @@ app.post("/admin/clients", requireAdminAuth, (req, res) => {
   res.json({ success: true, client });
 });
 
+// Campos que a edição de cliente pode alterar. São os mesmos da criação.
+// Espalhar o req.body inteiro, como aqui se fazia, deixava escrever qualquer
+// campo, incluindo passwordHash, id, activated e processes: quem apanhasse a
+// sessão de administrador definia a password de um cliente para um valor
+// conhecido e entrava como ele.
+const CAMPOS_EDITAVEIS = ["name", "email", "phone", "concelho", "processNumber"];
+
 app.put("/admin/clients/:id", requireAdminAuth, (req, res) => {
   const data = loadData();
   const idx = data.clients.findIndex(c => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false });
-  data.clients[idx] = { ...data.clients[idx], ...req.body };
+
+  const alteracoes = {};
+  for (const campo of CAMPOS_EDITAVEIS) {
+    if (Object.prototype.hasOwnProperty.call(req.body, campo)) {
+      alteracoes[campo] = req.body[campo];
+    }
+  }
+
+  data.clients[idx] = { ...data.clients[idx], ...alteracoes };
   saveData(data);
-  res.json({ success: true, client: data.clients[idx] });
+  const { passwordHash, ...semHash } = data.clients[idx];
+  res.json({ success: true, client: semHash });
 });
 
 app.delete("/admin/clients/:id", requireAdminAuth, (req, res) => {
@@ -1020,7 +1046,7 @@ app.get("/admin/export", requireAdminAuth, (req, res) => {
       c.name, c.email, c.phone, c.concelho, c.processNumber,
       new Date(c.createdAt).toLocaleDateString("pt-PT"),
       uploadActive ? "Ativo" : "Inativo",
-    ].map(v => `"${(v || "").toString().replace(/"/g, '""')}"`).join(",");
+    ].map(v => `"${csvSeguro(v)}"`).join(",");
   });
   const header = '"Nome","Email","Telefone","Concelho","Nº Processo","Data Criação","Upload"';
   const csv = [header, ...rows].join("\n");
