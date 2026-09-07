@@ -109,6 +109,13 @@ let apiKey = defaultClient.authentications["api-key"];
 apiKey.apiKey = process.env.BREVO_API_KEY;
 const brevo = new SibApiV3Sdk.TransactionalEmailsApi();
 
+// Destinatários das leads dos formulários. Estavam fixos no código, o que
+// obrigava a um deploy para mudar um endereço. Passam a vir de variáveis de
+// ambiente, com estes valores por omissão.
+const LEADS_TO = process.env.LEADS_TO || "geral@finmais.pt";
+const LEADS_CC = process.env.LEADS_CC || "geral.finmais@gmail.com";
+console.log(`Leads enviadas para ${LEADS_TO}, com cópia para ${LEADS_CC}`);
+
 // ─────────────────────────────────────────────
 // BREVO CONFIG (SMTP — portal de clientes)
 // ─────────────────────────────────────────────
@@ -428,8 +435,8 @@ app.post("/send-email", leadLimiter, leadGuard, async (req, res) => {
 
     await brevo.sendTransacEmail({
       sender: { name: "FinMais", email: "geral@finmais.pt" },
-      to: [{ email: "geral.finmais@gmail.com" }],
-      cc: [{ email: "geral@finmais.pt" }],
+      to: [{ email: LEADS_TO }],
+      cc: [{ email: LEADS_CC }],
       subject: simulador ? `Novo pedido de contacto — ${nome} (${simulador})` : `Novo pedido de contacto — ${nome}`,
       htmlContent: htmlInterno
     });
@@ -540,8 +547,8 @@ app.post("/send-email-consolidado", leadLimiter, leadGuard, async (req, res) => 
 
     await brevo.sendTransacEmail({
       sender: { name: "FinMais", email: "geral@finmais.pt" },
-      to: [{ email: "geral.finmais@gmail.com" }],
-      cc: [{ email: "geral@finmais.pt" }],
+      to: [{ email: LEADS_TO }],
+      cc: [{ email: LEADS_CC }],
       subject: `Novo pedido Crédito Consolidado — ${nome}`,
       htmlContent: htmlInterno
     });
@@ -664,8 +671,8 @@ app.post("/send-email-multiopcoes", leadLimiter, leadGuard, async (req, res) => 
 
     await brevo.sendTransacEmail({
       sender: { name: "FinMais", email: "geral@finmais.pt" },
-      to: [{ email: "geral.finmais@gmail.com" }],
-      cc: [{ email: "geral@finmais.pt" }],
+      to: [{ email: LEADS_TO }],
+      cc: [{ email: LEADS_CC }],
       subject: `Novo pedido Crédito Multiopções — ${nome}`,
       htmlContent: htmlInterno
     });
