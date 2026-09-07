@@ -1033,8 +1033,8 @@ app.post("/upload", requireClientAuth, upload.array("files", 10), async (req, re
   try {
     await transporter.sendMail({
       from: '"Fin+ Portal" <geral@finmais.pt>',
-      to: "geral@finmais.pt",
-      cc: "geral@finmais.pt",
+      to: LEADS_TO,
+      cc: LEADS_CC,
       subject: `📎 Documentos | ${client.name} | Processo ${proc.number || proc.id}`,
       html: `
         <div style="font-family: Georgia, serif; padding: 20px; color: #2c2c2c;">
