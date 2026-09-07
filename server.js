@@ -17,6 +17,18 @@ const app = express();
 // Turnstile veem sempre o mesmo IP para todos os visitantes.
 app.set("trust proxy", 1);
 
+// Mas há dois saltos, não um: o Render está alojado atrás da Cloudflare, pelo
+// que o req.ip do Express acaba a ser um IP de borda da Cloudflare, diferente
+// a cada pedido (172.64.0.0/13). Isso tornava os limitadores inúteis, porque
+// cada pedido caía num contador novo, e escrevia IPs sem valor nos logs.
+// O CF-Connecting-IP traz o IP real e é reescrito pela Cloudflare em todos os
+// pedidos que a atravessam, por isso não pode ser forjado pelo visitante.
+function ipDoCliente(req) {
+  const cf = req.headers["cf-connecting-ip"];
+  if (typeof cf === "string" && cf.trim()) return cf.trim();
+  return req.ip;
+}
+
 // ─────────────────────────────────────────────
 // CORS — restrito às origens conhecidas do Fin+
 // ─────────────────────────────────────────────
@@ -55,6 +67,7 @@ const loginLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: ipDoCliente,
   message: { success: false, message: "Demasiadas tentativas de login. Tente novamente mais tarde." },
 });
 
@@ -227,6 +240,7 @@ const leadLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: ipDoCliente,
   message: { success: false, message: "Demasiados pedidos enviados. Tente novamente dentro de alguns minutos." },
 });
 
@@ -301,7 +315,7 @@ const TELEFONE_RE = /^[\d\s+().-]{6,25}$/;
 // Resposta de falso sucesso: o bot fica convencido de que passou e não tenta
 // variações, mas nenhum email é enviado.
 function fakeSuccess(res, motivo, req) {
-  console.warn(`Lead bloqueada (${motivo}), IP ${req.ip}`);
+  console.warn(`Lead bloqueada (${motivo}), IP ${ipDoCliente(req)}`);
   return res.json({ success: true });
 }
 
@@ -342,12 +356,12 @@ async function leadGuard(req, res, next) {
   }
 
   // 4. Turnstile.
-  const ok = await verifyTurnstile(body.turnstileToken, req.ip);
+  const ok = await verifyTurnstile(body.turnstileToken, ipDoCliente(req));
   if (!ok) {
     if (TURNSTILE_ENFORCE) {
       return res.status(403).json({ success: false, message: "Verificação de segurança falhou. Recarregue a página e tente novamente." });
     }
-    console.warn(`Turnstile sem validação (modo suave), IP ${req.ip}`);
+    console.warn(`Turnstile sem validação (modo suave), IP ${ipDoCliente(req)}`);
   }
 
   // Campos de controlo não devem chegar aos emails.
