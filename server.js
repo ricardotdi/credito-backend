@@ -822,7 +822,11 @@ app.get("/client/check-token", (req, res) => {
 // ─────────────────────────────────────────────
 app.get("/admin/clients", requireAdminAuth, (req, res) => {
   const data = loadData();
-  res.json(data.clients);
+  // As hashes das passwords não têm de sair do servidor. O /client/me já as
+  // retirava, esta listagem não, e mandava as de todos os clientes para o
+  // browser sempre que o painel abria. A página de admin nunca as usa: mostra
+  // o estado da conta a partir do campo "activated".
+  res.json(data.clients.map(({ passwordHash, ...resto }) => resto));
 });
 
 app.post("/admin/clients", requireAdminAuth, (req, res) => {
@@ -959,11 +963,20 @@ app.post("/upload", requireClientAuth, upload.array("files", 10), async (req, re
   }
   const data = loadData();
   const client = data.clients.find(c => c.email === clientEmail);
-  if (client) {
-    const proc = client.processes.find(p => p.number === processNumber);
-    if (proc && !isUploadActive(proc)) {
-      return res.status(403).json({ success: false, message: "Período de upload não está ativo" });
-    }
+  if (!client) return res.status(403).json({ success: false, message: "Acesso negado" });
+
+  // O portal envia proc.number ou, quando o processo não tem número atribuído,
+  // o proc.id. Procurar só por number deixava o proc indefinido e, como a
+  // verificação seguinte estava condicionada à sua existência, bastava enviar
+  // um número inventado para o período de envio deixar de ser verificado.
+  const proc = (client.processes || []).find(
+    p => (p.number && p.number === processNumber) || p.id === processNumber
+  );
+  if (!proc) {
+    return res.status(403).json({ success: false, message: "Processo não encontrado" });
+  }
+  if (!isUploadActive(proc)) {
+    return res.status(403).json({ success: false, message: "Período de upload não está ativo" });
   }
   const attachments = req.files.map(f => ({
     filename: f.originalname,
@@ -975,13 +988,13 @@ app.post("/upload", requireClientAuth, upload.array("files", 10), async (req, re
       from: '"Fin+ Portal" <geral@finmais.pt>',
       to: "geral@finmais.pt",
       cc: "geral@finmais.pt",
-      subject: `📎 Documentos | ${clientName} | Processo ${processNumber}`,
+      subject: `📎 Documentos | ${client.name} | Processo ${proc.number || proc.id}`,
       html: `
         <div style="font-family: Georgia, serif; padding: 20px; color: #2c2c2c;">
           <h3 style="color: #978E58;">Novos documentos recebidos</h3>
-          <p><strong>Cliente:</strong> ${clientName}</p>
-          <p><strong>Email:</strong> ${clientEmail}</p>
-          <p><strong>Processo:</strong> ${processNumber}</p>
+          <p><strong>Cliente:</strong> ${escHtml(client.name)}</p>
+          <p><strong>Email:</strong> ${escHtml(client.email)}</p>
+          <p><strong>Processo:</strong> ${escHtml(proc.number || proc.id)}</p>
           <p><strong>Ficheiros:</strong> ${req.files.map(f => f.originalname).join(", ")}</p>
           <p><strong>Data:</strong> ${new Date().toLocaleString("pt-PT")}</p>
         </div>
