@@ -456,7 +456,7 @@ app.post("/send-email", leadLimiter, leadGuard, async (req, res) => {
           ` : ""}
           <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
           <p style="font-size:12px; color:#999;">Os seus dados são tratados de forma confidencial e não serão partilhados com terceiros.</p>
-          <p style="font-size:12px; color:#999;">Não responda a este email. Para contacto direto, envie um email para <a href="mailto:geral@finmais.pt" style="color:#999;">geral@finmais.pt</a> ou ligue para o 911 511 908.</p>
+          <p style="font-size:12px; color:#999;">Para contacto direto ligue para o 911 511 908.</p>
           <p style="font-size:13px;">Com os melhores cumprimentos,<br/><strong>Equipa FinMais</strong></p>
         </div>
       `;
