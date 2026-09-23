@@ -30,7 +30,7 @@ function ipDoCliente(req) {
 }
 
 // ─────────────────────────────────────────────
-// CORS — restrito às origens conhecidas do Fin+
+// CORS — restrito às origens conhecidas do Fin+ e da Bruma Finance
 // ─────────────────────────────────────────────
 const allowedOrigins = [
   "https://ricardotdi.github.io",
@@ -40,6 +40,11 @@ const allowedOrigins = [
   // redireccionar para aqui, pelo que o browser envia esta origem. Sem ela o
   // login do portal rebentava com 500 antes sequer de validar a password.
   "https://links.finmais.pt",
+  // Bruma Finance: o site novo, que serve as mesmas páginas e simuladores. O
+  // endereço pages.dev é o do projecto Cloudflare Pages, usado nas pré-visualizações.
+  "https://brumafinance.pt",
+  "https://www.brumafinance.pt",
+  "https://bruma-finance.pages.dev",
 ];
 app.use(cors({
   origin: (origin, callback) => {
