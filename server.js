@@ -114,6 +114,13 @@ let apiKey = defaultClient.authentications["api-key"];
 apiKey.apiKey = process.env.BREVO_API_KEY;
 const brevo = new SibApiV3Sdk.TransactionalEmailsApi();
 
+// Marca e remetente dos emails. O site passou a Bruma Finance; ficam em
+// variáveis de ambiente para mudar de marca ou de endereço sem novo deploy de
+// código. O endereço tem de estar verificado no Brevo, senão o envio falha.
+const MARCA = process.env.SENDER_NAME || "Bruma Finance";
+const MARCA_EMAIL = process.env.SENDER_EMAIL || "geral@brumafinance.pt";
+const REMETENTE = { name: MARCA, email: MARCA_EMAIL };
+
 // Destinatários das leads dos formulários. Estavam fixos no código, o que
 // obrigava a um deploy para mudar um endereço. Passam a vir de variáveis de
 // ambiente, com estes valores por omissão.
@@ -128,7 +135,7 @@ const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp-relay.brevo.com",
   port: parseInt(process.env.SMTP_PORT || "587"),
   auth: {
-    user: process.env.SMTP_USER || "geral@finmais.pt",
+    user: process.env.SMTP_USER || MARCA_EMAIL,
     pass: process.env.SMTP_PASS || process.env.BREVO_SMTP_PASS || "",
   },
 });
@@ -439,7 +446,7 @@ app.post("/send-email", leadLimiter, leadGuard, async (req, res) => {
     `;
 
     await brevo.sendTransacEmail({
-      sender: { name: "FinMais", email: "geral@finmais.pt" },
+      sender: REMETENTE,
       to: [{ email: LEADS_TO }],
       cc: [{ email: LEADS_CC }],
       subject: simulador ? `Novo pedido de contacto — ${nome} (${simulador})` : `Novo pedido de contacto — ${nome}`,
@@ -469,14 +476,14 @@ app.post("/send-email", leadLimiter, leadGuard, async (req, res) => {
           <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
           <p style="font-size:12px; color:#999;">Os seus dados são tratados de forma confidencial e não serão partilhados com terceiros.</p>
           <p style="font-size:12px; color:#999;">Para contacto direto ligue para o 911 511 908.</p>
-          <p style="font-size:13px;">Com os melhores cumprimentos,<br/><strong>Equipa FinMais</strong></p>
+          <p style="font-size:13px;">Com os melhores cumprimentos,<br/><strong>Equipa ${MARCA}</strong></p>
         </div>
       `;
 
       await brevo.sendTransacEmail({
-        sender: { name: "FinMais", email: "geral@finmais.pt" },
+        sender: REMETENTE,
         to: [{ email: email, name: nome }],
-        subject: temResumo ? "A sua simulação FinMais — confirmação de pedido" : "O seu contacto FinMais — confirmação de receção",
+        subject: temResumo ? `A sua simulação ${MARCA} — confirmação de pedido` : `O seu contacto ${MARCA} — confirmação de receção`,
         htmlContent: htmlCliente
       });
     }
@@ -551,7 +558,7 @@ app.post("/send-email-consolidado", leadLimiter, leadGuard, async (req, res) => 
     `;
 
     await brevo.sendTransacEmail({
-      sender: { name: "FinMais", email: "geral@finmais.pt" },
+      sender: REMETENTE,
       to: [{ email: LEADS_TO }],
       cc: [{ email: LEADS_CC }],
       subject: `Novo pedido Crédito Consolidado — ${nome}`,
@@ -586,14 +593,14 @@ app.post("/send-email-consolidado", leadLimiter, leadGuard, async (req, res) => 
         <p><strong>Taxa de esforço antes:</strong> ${dstiAntes || "—"} &nbsp;→&nbsp; <strong>depois:</strong> ${dstiDepois || "—"}</p>
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
         <p style="font-size:12px; color:#999;">Valores meramente indicativos, sujeitos a análise e aprovação bancária.</p>
-        <p style="font-size:13px;">Com os melhores cumprimentos,<br/><strong>Equipa FinMais</strong></p>
+        <p style="font-size:13px;">Com os melhores cumprimentos,<br/><strong>Equipa ${MARCA}</strong></p>
       </div>
     `;
 
     await brevo.sendTransacEmail({
-      sender: { name: "FinMais", email: "geral@finmais.pt" },
+      sender: REMETENTE,
       to: [{ email: email, name: nome }],
-      subject: "A sua simulação de Crédito Consolidado — FinMais",
+      subject: `A sua simulação de Crédito Consolidado — ${MARCA}`,
       htmlContent: htmlCliente
     });
 
@@ -675,7 +682,7 @@ app.post("/send-email-multiopcoes", leadLimiter, leadGuard, async (req, res) => 
     `;
 
     await brevo.sendTransacEmail({
-      sender: { name: "FinMais", email: "geral@finmais.pt" },
+      sender: REMETENTE,
       to: [{ email: LEADS_TO }],
       cc: [{ email: LEADS_CC }],
       subject: `Novo pedido Crédito Multiopções — ${nome}`,
@@ -708,14 +715,14 @@ app.post("/send-email-multiopcoes", leadLimiter, leadGuard, async (req, res) => 
         <p><strong>Taxa de esforço antes:</strong> ${dstiAntes || "—"} &nbsp;→&nbsp; <strong>depois:</strong> ${dstiDepois || "—"}</p>
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
         <p style="font-size:12px; color:#999;">Valores meramente indicativos, sujeitos a análise e aprovação bancária.</p>
-        <p style="font-size:13px;">Com os melhores cumprimentos,<br/><strong>Equipa FinMais</strong></p>
+        <p style="font-size:13px;">Com os melhores cumprimentos,<br/><strong>Equipa ${MARCA}</strong></p>
       </div>
     `;
 
     await brevo.sendTransacEmail({
-      sender: { name: "FinMais", email: "geral@finmais.pt" },
+      sender: REMETENTE,
       to: [{ email: email, name: nome }],
-      subject: "A sua simulação de Crédito Multiopções — FinMais",
+      subject: `A sua simulação de Crédito Multiopções — ${MARCA}`,
       htmlContent: htmlCliente
     });
 
@@ -788,22 +795,22 @@ app.post("/admin/invite", requireAdminAuth, async (req, res) => {
 
   try {
     await transporter.sendMail({
-      from: '"Fin+" <geral@finmais.pt>',
+      from: `"${MARCA}" <${MARCA_EMAIL}>`,
       to: client.email,
-      subject: "Bem-vindo à sua Área Reservada Fin+",
+      subject: `Bem-vindo à sua Área Reservada ${MARCA}`,
       html: `
         <div style="font-family: Georgia, serif; max-width: 500px; margin: 0 auto; padding: 40px 20px; color: #2c2c2c;">
           <div style="text-align: center; margin-bottom: 30px;">
-            <span style="font-size: 24px; font-weight: bold; color: #978E58; letter-spacing: 2px;">FIN+</span>
+            <span style="font-size: 22px; font-weight: bold; color: #153A26; letter-spacing: 2px;">${MARCA.toUpperCase()}</span>
           </div>
           <h2 style="color: #2c2c2c; font-weight: normal;">Olá, ${client.name}</h2>
-          <p style="line-height: 1.7; color: #555;">Foi criada a sua área reservada na Fin+. Aqui poderá acompanhar o estado do seu processo e enviar documentos de forma segura.</p>
+          <p style="line-height: 1.7; color: #555;">Foi criada a sua área reservada na ${MARCA}. Aqui poderá acompanhar o estado do seu processo e enviar documentos de forma segura.</p>
           <div style="text-align: center; margin: 35px 0;">
-            <a href="${activationLink}" style="background: #978E58; color: white; padding: 14px 32px; text-decoration: none; font-size: 15px; letter-spacing: 1px; display: inline-block;" clicktracking="off">ATIVAR ACESSO</a>
+            <a href="${activationLink}" style="background: #C9A24B; color: #101014; padding: 14px 32px; text-decoration: none; font-size: 15px; letter-spacing: 1px; display: inline-block;" clicktracking="off">ATIVAR ACESSO</a>
           </div>
           <p style="font-size: 13px; color: #999; line-height: 1.6;">Este link é válido por 7 dias. Se não solicitou este acesso, ignore este email.</p>
           <p style="font-size: 11px; color: #ccc; line-height: 1.8; word-break: break-all;">Se o botão não funcionar, copia este link:<br>${activationLink}</p>
-          <p style="font-size: 12px; color: #bbb; text-align: center;">Fin+ · Intermediário de Crédito · Registo BdP nº 0008693</p>
+          <p style="font-size: 12px; color: #bbb; text-align: center;">${MARCA} · Intermediário de Crédito · Registo BdP nº 0008693</p>
         </div>
       `,
     });
@@ -1037,7 +1044,7 @@ app.post("/upload", requireClientAuth, upload.array("files", 10), async (req, re
   }));
   try {
     await transporter.sendMail({
-      from: '"Fin+ Portal" <geral@finmais.pt>',
+      from: `"${MARCA} Portal" <${MARCA_EMAIL}>`,
       to: LEADS_TO,
       cc: LEADS_CC,
       subject: `📎 Documentos | ${client.name} | Processo ${proc.number || proc.id}`,
@@ -1092,7 +1099,7 @@ app.use((err, req, res, next) => {
     console.warn(`CORS: origem recusada "${req.headers.origin}" em ${req.method} ${req.path}`);
     return res.status(403).json({
       success: false,
-      message: "Origem não autorizada. Se este pedido vem de um site da Fin+, é preciso acrescentar a origem à lista permitida no backend.",
+      message: "Origem não autorizada. Se este pedido vem de um site da Bruma Finance ou da Fin+, é preciso acrescentar a origem à lista permitida no backend.",
     });
   }
 
