@@ -144,8 +144,8 @@ const ASSINATURA = `
 // Destinatários das leads dos formulários. Estavam fixos no código, o que
 // obrigava a um deploy para mudar um endereço. Passam a vir de variáveis de
 // ambiente, com estes valores por omissão.
-const LEADS_TO = process.env.LEADS_TO || "geral@finmais.pt";
-const LEADS_CC = process.env.LEADS_CC || "geral.finmais@gmail.com";
+const LEADS_TO = process.env.LEADS_TO || "geral@brumafinance.pt";
+const LEADS_CC = process.env.LEADS_CC || "geral.brumafinance@gmail.com";
 console.log(`Leads enviadas para ${LEADS_TO}, com cópia para ${LEADS_CC}`);
 
 // ─────────────────────────────────────────────
