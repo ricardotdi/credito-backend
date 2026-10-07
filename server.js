@@ -484,18 +484,17 @@ app.post("/send-email", leadLimiter, leadGuard, async (req, res) => {
 
       const htmlCliente = `
         <div style="font-family:Arial,sans-serif; max-width:560px; margin:0 auto; color:#333;">
-          <h2 style="color:#A19276;">Recebemos o seu pedido!</h2>
+          <h2 style="color:#153A26;">Recebemos o seu pedido!</h2>
           <p>Olá <strong>${nome}</strong>,</p>
           <p>${introTexto}</p>
           ${mensagem ? `<p><strong>O seu assunto:</strong> ${mensagem}</p>` : ""}
           ${temResumo ? `
             <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
-            <h3 style="color:#A19276;">Resumo da sua simulação</h3>
+            <h3 style="color:#153A26;">Resumo da sua simulação</h3>
             ${resumoSimulacao}
           ` : ""}
           <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
           <p style="font-size:12px; color:#999;">Os seus dados são tratados de forma confidencial e não serão partilhados com terceiros.</p>
-          <p style="font-size:12px; color:#999;">Para contacto direto ligue para o 911 511 908.</p>
           <p style="font-size:13px;">Com os melhores cumprimentos,</p>${ASSINATURA}
         </div>
       `;
@@ -543,7 +542,7 @@ app.post("/send-email-consolidado", leadLimiter, leadGuard, async (req, res) => 
     }
 
     const htmlInterno = `
-      <h2 style="color:#A19276;">🔔 Novo pedido — Crédito Consolidado</h2>
+      <h2 style="color:#153A26;">🔔 Novo pedido — Crédito Consolidado</h2>
       <h3>Dados do cliente</h3>
       <p><strong>Nome:</strong> ${nome}</p>
       <p><strong>Email:</strong> ${email}</p>
@@ -591,11 +590,11 @@ app.post("/send-email-consolidado", leadLimiter, leadGuard, async (req, res) => 
 
     const htmlCliente = `
       <div style="font-family:Arial,sans-serif; max-width:560px; margin:0 auto; color:#333;">
-        <h2 style="color:#A19276;">Recebemos o seu pedido!</h2>
+        <h2 style="color:#153A26;">Recebemos o seu pedido!</h2>
         <p>Olá <strong>${nome}</strong>,</p>
         <p>Obrigado pelo seu contacto. Recebemos a sua simulação de consolidação de crédito e entraremos em contacto consigo em breve${horarioTexto}.</p>
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
-        <h3 style="color:#A19276;">Resumo da sua simulação</h3>
+        <h3 style="color:#153A26;">Resumo da sua simulação</h3>
         <p><strong>Créditos a consolidar:</strong></p>
         ${(creditosConsolidar || "").split(" | ").map(c => `<p style="margin:2px 0;">• ${c}</p>`).join("")}
         <p><strong>Valor do imóvel em garantia:</strong> ${valorImovel || "—"}</p>
@@ -603,7 +602,7 @@ app.post("/send-email-consolidado", leadLimiter, leadGuard, async (req, res) => 
         ${htmlTaxa}
         ${montanteExtra ? `<p><strong>Montante extra solicitado:</strong> ${montanteExtra}</p>` : ""}
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
-        <h3 style="color:#A19276;">Resultado indicativo</h3>
+        <h3 style="color:#153A26;">Resultado indicativo</h3>
         <p><strong>Capital consolidado:</strong> ${capitalConsolidado || "—"}</p>
         <p><strong>Nova prestação mensal:</strong> ${novaPrestacao || "—"}</p>
         <p><strong>Prestação atual total:</strong> ${prestacaoAtual || "—"}</p>
@@ -665,7 +664,7 @@ app.post("/send-email-multiopcoes", leadLimiter, leadGuard, async (req, res) => 
       : `${idadeProponente1 || "—"} anos`;
 
     const htmlInterno = `
-      <h2 style="color:#A19276;">🔔 Novo pedido — Crédito Multiopções</h2>
+      <h2 style="color:#153A26;">🔔 Novo pedido — Crédito Multiopções</h2>
       <h3>Dados do cliente</h3>
       <p><strong>Nome:</strong> ${nome}</p>
       <p><strong>Email:</strong> ${email}</p>
@@ -715,17 +714,17 @@ app.post("/send-email-multiopcoes", leadLimiter, leadGuard, async (req, res) => 
 
     const htmlCliente = `
       <div style="font-family:Arial,sans-serif; max-width:560px; margin:0 auto; color:#333;">
-        <h2 style="color:#A19276;">Recebemos o seu pedido!</h2>
+        <h2 style="color:#153A26;">Recebemos o seu pedido!</h2>
         <p>Olá <strong>${nome}</strong>,</p>
         <p>Obrigado pelo seu contacto. Recebemos a sua simulação de Crédito Multiopções e entraremos em contacto consigo em breve${horarioTexto2}.</p>
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
-        <h3 style="color:#A19276;">Resumo da sua simulação</h3>
+        <h3 style="color:#153A26;">Resumo da sua simulação</h3>
         <p><strong>Finalidade:</strong> ${finalidade || "—"}</p>
         <p><strong>Montante a libertar:</strong> ${montanteLibertar || "—"}</p>
         <p><strong>Prazo pretendido:</strong> ${novoPrazo || "—"}</p>
         ${htmlTaxa}
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
-        <h3 style="color:#A19276;">Resultado indicativo</h3>
+        <h3 style="color:#153A26;">Resultado indicativo</h3>
         <p><strong>Capital total financiado:</strong> ${capitalTotalFinanciado || "—"}</p>
         <p><strong>Nova prestação mensal:</strong> ${novaPrestacao || "—"}</p>
         <p><strong>Prestação atual:</strong> ${prestacaoAtual || "—"}</p>
