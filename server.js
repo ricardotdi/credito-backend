@@ -121,6 +121,26 @@ const MARCA = process.env.SENDER_NAME || "Bruma Finance";
 const MARCA_EMAIL = process.env.SENDER_EMAIL || "geral@brumafinance.pt";
 const REMETENTE = { name: MARCA, email: MARCA_EMAIL };
 
+// Assinatura dos emails de confirmação ao cliente. O logótipo vem por URL do
+// site e não embebido em base64, porque o Gmail e o Outlook descartam imagens
+// data: nas mensagens recebidas, e a assinatura apareceria partida.
+const ASSINATURA = `
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:620px;max-width:100%;color:#333;font-family:Arial,Helvetica,sans-serif;margin-top:16px;">
+            <tr>
+              <td valign="middle" style="width:94px;padding:0 18px 0 0;">
+                <img src="https://brumafinance.pt/assets/assinatura-bruma.png" width="78" height="78" alt="${MARCA}" style="display:block;width:78px;height:78px;border:0;outline:none;text-decoration:none;" />
+              </td>
+              <td valign="middle" style="border-left:1px solid #b7b7b7;padding:0 0 0 16px;">
+                <div style="font-size:15px;line-height:19px;font-weight:bold;color:#20242a;">Ricardo Custódio</div>
+                <div style="font-size:12px;line-height:17px;color:#666;">Intermediário de Crédito - ${MARCA}</div>
+                <div style="font-size:12px;line-height:18px;color:#444;margin-top:1px;">Tel / WhatsApp: <span style="color:#222;">911 511 908</span></div>
+                <div style="font-size:12px;line-height:17px;"><a href="https://www.brumafinance.pt" style="color:#176343;text-decoration:none;font-weight:bold;">www.brumafinance.pt</a></div>
+                <div style="font-size:12px;line-height:17px;color:#555;">Continente, Madeira e Açores</div>
+                <div style="font-size:9px;line-height:13px;color:#8a8a8a;margin-top:3px;">Intermediário de Crédito registado no Banco de Portugal sob o n.º 0008693</div>
+              </td>
+            </tr>
+          </table>`;
+
 // Destinatários das leads dos formulários. Estavam fixos no código, o que
 // obrigava a um deploy para mudar um endereço. Passam a vir de variáveis de
 // ambiente, com estes valores por omissão.
@@ -476,7 +496,7 @@ app.post("/send-email", leadLimiter, leadGuard, async (req, res) => {
           <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
           <p style="font-size:12px; color:#999;">Os seus dados são tratados de forma confidencial e não serão partilhados com terceiros.</p>
           <p style="font-size:12px; color:#999;">Para contacto direto ligue para o 911 511 908.</p>
-          <p style="font-size:13px;">Com os melhores cumprimentos,<br/><strong>Equipa ${MARCA}</strong></p>
+          <p style="font-size:13px;">Com os melhores cumprimentos,</p>${ASSINATURA}
         </div>
       `;
 
@@ -593,7 +613,7 @@ app.post("/send-email-consolidado", leadLimiter, leadGuard, async (req, res) => 
         <p><strong>Taxa de esforço antes:</strong> ${dstiAntes || "—"} &nbsp;→&nbsp; <strong>depois:</strong> ${dstiDepois || "—"}</p>
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
         <p style="font-size:12px; color:#999;">Valores meramente indicativos, sujeitos a análise e aprovação bancária.</p>
-        <p style="font-size:13px;">Com os melhores cumprimentos,<br/><strong>Equipa ${MARCA}</strong></p>
+        <p style="font-size:13px;">Com os melhores cumprimentos,</p>${ASSINATURA}
       </div>
     `;
 
@@ -715,7 +735,7 @@ app.post("/send-email-multiopcoes", leadLimiter, leadGuard, async (req, res) => 
         <p><strong>Taxa de esforço antes:</strong> ${dstiAntes || "—"} &nbsp;→&nbsp; <strong>depois:</strong> ${dstiDepois || "—"}</p>
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
         <p style="font-size:12px; color:#999;">Valores meramente indicativos, sujeitos a análise e aprovação bancária.</p>
-        <p style="font-size:13px;">Com os melhores cumprimentos,<br/><strong>Equipa ${MARCA}</strong></p>
+        <p style="font-size:13px;">Com os melhores cumprimentos,</p>${ASSINATURA}
       </div>
     `;
 
