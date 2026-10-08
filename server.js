@@ -30,18 +30,12 @@ function ipDoCliente(req) {
 }
 
 // ─────────────────────────────────────────────
-// CORS — restrito às origens conhecidas do Fin+ e da Bruma Finance
+// CORS — restrito às origens da Bruma Finance
 // ─────────────────────────────────────────────
+// O site finmais.pt e o links.finmais.pt foram desligados a 08/10/2026, com o
+// rebranding, por isso as suas origens saíram daqui. O endereço pages.dev é o
+// do projecto Cloudflare Pages, usado nas pré-visualizações.
 const allowedOrigins = [
-  "https://ricardotdi.github.io",
-  "https://finmais.pt",
-  "https://www.finmais.pt",
-  // Portal de clientes e página de admin. O endereço do GitHub Pages passou a
-  // redireccionar para aqui, pelo que o browser envia esta origem. Sem ela o
-  // login do portal rebentava com 500 antes sequer de validar a password.
-  "https://links.finmais.pt",
-  // Bruma Finance: o site novo, que serve as mesmas páginas e simuladores. O
-  // endereço pages.dev é o do projecto Cloudflare Pages, usado nas pré-visualizações.
   "https://brumafinance.pt",
   "https://www.brumafinance.pt",
   "https://bruma-finance.pages.dev",
