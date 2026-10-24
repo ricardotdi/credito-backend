@@ -272,7 +272,7 @@ app.post("/send-email", leadLimiter, leadGuard, async (req, res) => {
       ${tipoTaxa ? `<p><strong>Tipo de Taxa:</strong> ${tipoTaxa}</p>` : ""}
       ${rendimentoFmt ? `<p><strong>Rendimento Líquido Mensal:</strong> ${rendimentoFmt}</p>` : ""}
       ${outrasFmt ? `<p><strong>Outras prestações mensais:</strong> ${outrasFmt}</p>` : ""}
-      ${dsti ? `<p><strong>Taxa de Esforço (DSTI):</strong> ${dsti}</p>` : ""}
+      ${dsti ? `<p><strong>Taxa de Esforço e DSTI:</strong> ${dsti}</p>` : ""}
       ${imt ? `<p><strong>IMT:</strong> ${imt}</p>` : ""}
       ${totalImpostos ? `<p><strong>Total de Impostos (IMT + IS):</strong> ${totalImpostos}</p>` : ""}
       ${tabelaAplicada ? `<p><strong>Tabela aplicada:</strong> ${tabelaAplicada}</p>` : ""}
