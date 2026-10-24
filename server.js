@@ -350,7 +350,7 @@ app.post("/send-email-consolidado", leadLimiter, leadGuard, async (req, res) => 
       montanteExtra, rendimentoLiquido, encargosAtuais,
       capitalConsolidado, novaPrestacao, prestacaoAtual,
       tan, taeg, mtic, poupancaMensal,
-      dstiAntes, dstiDepois
+      dstiAntes, dstiDepois, dstiNovo
     } = req.body;
 
     const tipoLabel = { variavel: "Variável", fixa: "Fixa", mista: "Mista" }[tipoTaxa] || tipoTaxa;
@@ -388,8 +388,9 @@ app.post("/send-email-consolidado", leadLimiter, leadGuard, async (req, res) => 
       <hr/>
       <h3>Rendimento</h3>
       <p><strong>Rendimento líquido mensal:</strong> ${rendimentoLiquido || "—"}</p>
-      <p><strong>Taxa de esforço antes (DSTI):</strong> ${dstiAntes || "—"}</p>
-      <p><strong>Taxa de esforço depois (DSTI):</strong> ${dstiDepois || "—"}</p>
+      <p><strong>Taxa de esforço antes (TE):</strong> ${dstiAntes || "—"}</p>
+      <p><strong>Taxa de esforço depois (TE):</strong> ${dstiDepois || "—"}</p>
+      <p><strong>DSTI do novo crédito (stress BdP):</strong> ${dstiNovo || "—"}</p>
       <hr/>
       <h3>Resultados da simulação</h3>
       <p><strong>Capital consolidado:</strong> ${capitalConsolidado || "—"}</p>
@@ -433,7 +434,7 @@ app.post("/send-email-consolidado", leadLimiter, leadGuard, async (req, res) => 
         <p><strong>Poupança mensal estimada:</strong> ${poupancaMensal || "—"}</p>
         <p><strong>TAN:</strong> ${tan || "—"} &nbsp;|&nbsp; <strong>TAEG:</strong> ${taeg || "—"}</p>
         <p><strong>MTIC (custo total estimado):</strong> ${mtic || "—"}</p>
-        <p><strong>Taxa de esforço antes:</strong> ${dstiAntes || "—"} &nbsp;→&nbsp; <strong>depois:</strong> ${dstiDepois || "—"}</p>
+        <p><strong>Taxa de esforço (TE), antes:</strong> ${dstiAntes || "—"} &nbsp;→&nbsp; <strong>depois:</strong> ${dstiDepois || "—"}</p>
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
         <p style="font-size:12px; color:#999;">Valores meramente indicativos, sujeitos a análise e aprovação bancária.</p>
         <p style="font-size:13px;">Com os melhores cumprimentos,</p>${ASSINATURA}
@@ -511,8 +512,8 @@ app.post("/send-email-multiopcoes", leadLimiter, leadGuard, async (req, res) => 
       <h3>Rendimento</h3>
       <p><strong>Rendimento líquido mensal:</strong> ${rendimentoLiquido || "—"}</p>
       <p><strong>Encargos mensais atuais:</strong> ${encargosAtuais || "—"}</p>
-      <p><strong>Taxa de esforço antes (DSTI):</strong> ${dstiAntes || "—"}</p>
-      <p><strong>Taxa de esforço depois (DSTI):</strong> ${dstiDepois || "—"}</p>
+      <p><strong>Taxa de esforço antes (TE):</strong> ${dstiAntes || "—"}</p>
+      <p><strong>Taxa de esforço depois (TE):</strong> ${dstiDepois || "—"}</p>
       <p><strong>DSTI do novo crédito (stress BdP):</strong> ${dstiNovo || "—"}</p>
       <hr/>
       <h3>Resultados da simulação</h3>
@@ -555,7 +556,7 @@ app.post("/send-email-multiopcoes", leadLimiter, leadGuard, async (req, res) => 
         <p><strong>Variação da prestação mensal:</strong> ${variacaoPrestacaoMensal || "—"}</p>
         <p><strong>TAN:</strong> ${tan || "—"} &nbsp;|&nbsp; <strong>TAEG:</strong> ${taeg || "—"}</p>
         <p><strong>MTIC (custo total estimado):</strong> ${mtic || "—"}</p>
-        <p><strong>Taxa de esforço antes:</strong> ${dstiAntes || "—"} &nbsp;→&nbsp; <strong>depois:</strong> ${dstiDepois || "—"}</p>
+        <p><strong>Taxa de esforço (TE), antes:</strong> ${dstiAntes || "—"} &nbsp;→&nbsp; <strong>depois:</strong> ${dstiDepois || "—"}</p>
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
         <p style="font-size:12px; color:#999;">Valores meramente indicativos, sujeitos a análise e aprovação bancária.</p>
         <p style="font-size:13px;">Com os melhores cumprimentos,</p>${ASSINATURA}
