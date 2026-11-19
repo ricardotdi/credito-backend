@@ -243,7 +243,7 @@ app.post("/send-email", leadLimiter, leadGuard, async (req, res) => {
   try {
     const {
       nome, email, telefone, horario, simulador, mensagem,
-      valorCredito, prazo, carencia, tipoCredito, tipoTaxa,
+      valorCredito, prazo, carencia, tipoCredito, finalidade, tipoTaxa,
       rendimentoLiquido, dsti,
       rendimento, outrasPrestacoes, montanteMaximo,
       valorCompra, imt, totalImpostos, tabelaAplicada
@@ -267,6 +267,7 @@ app.post("/send-email", leadLimiter, leadGuard, async (req, res) => {
       ${valorCompraFmt ? `<p><strong>Valor de compra do imóvel:</strong> ${valorCompraFmt}</p>` : ""}
       ${valorCreditoFmt ? `<p><strong>Valor do crédito:</strong> ${valorCreditoFmt}</p>` : ""}
       ${tipoCredito ? `<p><strong>Tipo de Crédito:</strong> ${tipoCredito}</p>` : ""}
+      ${finalidade ? `<p><strong>Finalidade:</strong> ${finalidade}</p>` : ""}
       ${prazo ? `<p><strong>Prazo:</strong> ${prazo}</p>` : ""}
       ${carencia ? `<p><strong>Carência de capital:</strong> ${carencia}</p>` : ""}
       ${tipoTaxa ? `<p><strong>Tipo de Taxa:</strong> ${tipoTaxa}</p>` : ""}
