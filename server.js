@@ -239,12 +239,24 @@ async function leadGuard(req, res, next) {
 // ─────────────────────────────────────────────
 // ROTA LEADS
 // ─────────────────────────────────────────────
+function periodoDeContacto(horario) {
+  const h = String(horario || "").trim();
+  if (!h) return "";
+  const base = h.toLowerCase().replace(/^de\s+/, "");
+  const horas = (h.match(/\(([^)]+)\)/) || [])[1];
+  const sufixo = horas ? " (" + horas + ")" : "";
+  if (base.startsWith("manh"))  return ", no período da manhã" + sufixo + ",";
+  if (base.startsWith("tarde")) return ", no período da tarde" + sufixo + ",";
+  if (base.indexOf("almoço") > -1) return ", à hora de almoço,";
+  return "";
+}
+
 app.post("/send-email", leadLimiter, leadGuard, async (req, res) => {
   try {
     const {
       nome, email, telefone, horario, simulador, mensagem,
       valorCredito, prazo, carencia, tipoCredito, finalidade, tipoTaxa,
-      rendimentoLiquido, dsti,
+      rendimentoLiquido, prestacaoEstimada, dsti,
       rendimento, outrasPrestacoes, montanteMaximo,
       valorCompra, imt, totalImpostos, tabelaAplicada
     } = req.body;
@@ -273,6 +285,7 @@ app.post("/send-email", leadLimiter, leadGuard, async (req, res) => {
       ${tipoTaxa ? `<p><strong>Tipo de Taxa:</strong> ${tipoTaxa}</p>` : ""}
       ${rendimentoFmt ? `<p><strong>Rendimento Líquido Mensal:</strong> ${rendimentoFmt}</p>` : ""}
       ${outrasFmt ? `<p><strong>Outras prestações mensais:</strong> ${outrasFmt}</p>` : ""}
+      ${prestacaoEstimada ? `<p><strong>Prestação estimada:</strong> ${prestacaoEstimada}</p>` : ""}
       ${dsti ? `<p><strong>Taxa de Esforço e DSTI:</strong> ${dsti}</p>` : ""}
       ${imt ? `<p><strong>IMT:</strong> ${imt}</p>` : ""}
       ${totalImpostos ? `<p><strong>Total de Impostos (IMT + IS):</strong> ${totalImpostos}</p>` : ""}
@@ -299,9 +312,7 @@ app.post("/send-email", leadLimiter, leadGuard, async (req, res) => {
     });
 
     if (email) {
-      const horarioTexto = horario && horario !== "qualquer"
-        ? ", preferencialmente <strong>" + horario + "</strong>"
-        : "";
+      const horarioTexto = periodoDeContacto(horario);
 
       const introTexto = temResumo
         ? `Obrigado pelo seu contacto. Recebemos a sua simulação${simulador ? ` de <strong>${simulador}</strong>` : ""} e entraremos em contacto consigo em breve${horarioTexto} através do número <strong>${telefone || "indicado"}</strong>.`
@@ -319,6 +330,7 @@ app.post("/send-email", leadLimiter, leadGuard, async (req, res) => {
             ${resumoSimulacao}
           ` : ""}
           <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
+          ${temResumo ? `<p style="font-size:12px; color:#999;">Simulação de caráter indicativo e não vinculativo. O valor final depende da análise de risco e da aprovação da instituição de crédito.</p>` : ""}
           <p style="font-size:12px; color:#999;">Os seus dados são tratados de forma confidencial e não serão partilhados com terceiros.</p>
           <p style="font-size:13px;">Com os melhores cumprimentos,</p>${ASSINATURA}
         </div>
